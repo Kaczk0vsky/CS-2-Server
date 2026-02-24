@@ -402,3 +402,4 @@ FodyWeavers.xsd
 
 # Custom
 .env
+/cs2-data/

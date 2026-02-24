@@ -46,7 +46,7 @@ services:                                               # Add local console for 
         condition: service_healthy
         restart: true
     volumes:
-      - cs2-data:/home/steam/cs2-dedicated            # Persistent data volume mount point inside container
+      - ./cs2-data:/home/steam/cs2-dedicated           # Persistent data volume mount point inside container
     ports:
       - "27015:27015/tcp"
       - "27015:27015/udp"
@@ -59,11 +59,8 @@ services:                                               # Add local console for 
     image: mysql:latest
     environment:
       MYSQL_DATABASE: 'db'
-      # So you don't have to use root, but you can if you like
       MYSQL_USER: 'server'
-      # You can use whatever password you like
       MYSQL_PASSWORD: 'changeme'
-      # Password for root access
       MYSQL_ROOT_PASSWORD: 'changeme'
     healthcheck:
       test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
@@ -78,7 +75,6 @@ services:                                               # Add local console for 
     networks:
       - cs2-network
 volumes:
-  cs2-data:
   cs2-db:
 networks:
   cs2-network:
