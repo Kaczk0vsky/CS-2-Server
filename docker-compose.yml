@@ -1,7 +1,6 @@
 services:                                               # Add local console for docker attach, docker attach --sig-proxy=false cs2-dedicated
   cs2-server:
     image: joedwards32/cs2
-    build: .
     container_name: cs2-server
     environment:
       # Server configuration
@@ -42,13 +41,12 @@ services:                                               # Add local console for 
       # Login to steam
       - STEAMUSER=${STEAMUSER}
       - STEAMPASSWORD=${STEAMPASSWORD}
-      - STEAMAUTHCODE=${STEAMAUTHCODE}
-    # depends_on:
-    #   cs2-db:
-    #     condition: service_healthy
-    #     restart: true
+    depends_on:
+      cs2-db:
+        condition: service_healthy
+        restart: true
     volumes:
-      - ./cs2-data:/home/steam/cs2-dedicated            # Persistent data volume mount point inside container
+      - cs2-data:/home/steam/cs2-dedicated            # Persistent data volume mount point inside container
     ports:
       - "27015:27015/tcp"
       - "27015:27015/udp"
@@ -72,17 +70,15 @@ services:                                               # Add local console for 
       timeout: 5s
       retries: 10
     ports:
-      # <Port exposed> : <MySQL Port running inside container>
       - '3306:3306'
     expose:
-      # Opens port 3306 on the container
       - '3306'
-    # Where our data will be persisted
     volumes:
       - cs2-db:/var/lib/mysql
     networks:
       - cs2-network
 volumes:
+  cs2-data:
   cs2-db:
 networks:
   cs2-network:
