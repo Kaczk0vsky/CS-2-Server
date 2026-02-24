@@ -4,3 +4,4 @@ First setup:
 3. Create Token: https://steamcommunity.com/dev/managegameservers
 4. Copy .env.template as .env and fill with your information.
 5. Open Powershell console in the folder with server and write: "docker compose up".
+6. ./ARRCON.exe -H localhost -P 28015 -p changename -i
