@@ -20,3 +20,17 @@ It creates a super admin.
 1. `docker compose up` - run the server and database.
 2. Open your local cs2 game, open console and type: `connect localhost`.
 3. In game type `!admin` to check if everything works.
+
+## Development
+### New versions
+1. Pull the newest version.
+2. Copy the `addons` folder to: `cs2-data/game/csgo
+3. Connect to the server!
+
+### New plugins
+1. Create new folder in `addons/counterstrikesharp/plugins/<Your New Plugin>`.
+2. After finishing development and to test changes go to you plugin folder in the console and type: `dotnet publish -c Release`.
+3. Folder: `bin/Release/net8.0/publish/` will be created. Copy everything from `publish` to: `addons/counterstrikesharp/plugins/<Your New Plugin>/`.
+4. Restart containers.
+5. Attach to cs2-server container and type: `css_plugins list`. If you see your plugin then it is loaded. You can also manually load it: `css_plugins load <Your New Plugin>`.
+6. Connect to server and check it out.
