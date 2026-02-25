@@ -455,24 +455,25 @@ public class SimpleRank : BasePlugin
         if (!_players.ContainsKey(steamId)) return;
 
         var data = _players[steamId];
-        var oldRank = GetRank(data.Points);
+
+        var oldPoints = data.Points;
+        var oldRank = GetRank(oldPoints);
 
         data.Points += amount;
         if (data.Points < 0) data.Points = 0;
 
-        var newRank = GetRank(data.Points);
+        var newPoints = data.Points;
+        var newRank = GetRank(newPoints);
 
         Server.NextFrame(() =>
         {
             if (!player.IsValid) return;
 
-            // Show points change
             if (amount > 0)
-                player.PrintToChat($" {ChatColors.Green}[Rank]{ChatColors.Default} +{amount} ({reason}) | Punkty: {ChatColors.Blue}{data.Points}");
+                player.PrintToChat($" {ChatColors.Green}[Rank]{ChatColors.Default} +{amount} ({reason}) | Punkty: {ChatColors.Blue}{newPoints}");
             else if (amount < 0)
-                player.PrintToChat($" {ChatColors.Red}[Rank]{ChatColors.Default} {amount} ({reason}) | Punkty: {ChatColors.Blue}{data.Points}");
+                player.PrintToChat($" {ChatColors.Red}[Rank]{ChatColors.Default} {amount} ({reason}) | Punkty: {ChatColors.Blue}{newPoints}");
 
-            // Rank change notification
             if (oldRank.Name != newRank.Name)
             {
                 if (newRank.Points > oldRank.Points)
