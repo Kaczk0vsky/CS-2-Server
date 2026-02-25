@@ -1,7 +1,7 @@
-#Guide
+# Guide
 Basic overview how to setup everything and how to work with the cs 2 server itself.
 
-##First setup:
+## First setup:
 1. Clone the repo - it is required to have 60+ GB on disc.
 2. Download Docker Desktop: https://www.docker.com/
 3. Create Token: https://steamcommunity.com/dev/managegameservers
