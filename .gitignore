@@ -402,7 +402,4 @@ FodyWeavers.xsd
 
 # Custom
 .env
-/cs2-data/temp/
-/cs2-data/downloading/
-/cs2-data/steamapps/
-/cs2-data/game/
+/cs2-data
