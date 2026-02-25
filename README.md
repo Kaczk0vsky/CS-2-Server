@@ -28,7 +28,7 @@ It creates a super admin.
 3. Connect to the server!
 
 ### New plugins
-1. Create new folder in `addons/counterstrikesharp/plugins/<Your New Plugin>`.
+1. Go to `addons/counterstrikesharp/plugins` and create new plugin by typing `dotnet new classlib -n <Your New Plugin>`.
 2. After finishing development and to test changes go to you plugin folder in the console and type: `dotnet publish -c Release`.
 3. Folder: `bin/Release/net8.0/publish/` will be created. Copy everything from `publish` to: `addons/counterstrikesharp/plugins/<Your New Plugin>/`.
 4. Restart containers.
