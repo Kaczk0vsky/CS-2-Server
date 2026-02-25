@@ -129,5 +129,11 @@ public class KillEvents
         player.PrintToChat($" {prefix}{ChatColors.Default} {color}{sign}{ChatColors.Default} ({reason})");
 
         _hudService.ShowRankChange(player, result.oldRank, result.newRank);
+        if (result.classLeveledUp)
+        {
+            var codPlayer = _rankService.GetPlayer(player.SteamID);
+            if (codPlayer?.SelectedClassName != null)
+                _hudService.ShowClassLevelUp(player, codPlayer.SelectedClassName, result.classNewLevel);
+        }
     }
 }

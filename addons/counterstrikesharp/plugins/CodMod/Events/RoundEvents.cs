@@ -116,6 +116,12 @@ public class RoundEvents
 
             player.PrintToChat($" {prefix}{ChatColors.Default} {color}{sign}{ChatColors.Default} ({reason})");
             _hudService.ShowRankChange(player, result.oldRank, result.newRank);
+            if (result.classLeveledUp)
+            {
+                var codPlayer = _rankService.GetPlayer(player.SteamID);
+                if (codPlayer?.SelectedClassName != null)
+                    _hudService.ShowClassLevelUp(player, codPlayer.SelectedClassName, result.classNewLevel);
+            }
         }
 
         return HookResult.Continue;
@@ -133,6 +139,12 @@ public class RoundEvents
                 $" {ChatColors.Green}[COD MOD]{ChatColors.Default} " +
                 $"{ChatColors.Green}+{RankService.POINTS_MVP}{ChatColors.Default} (MVP)");
             _hudService.ShowRankChange(player, result.oldRank, result.newRank);
+            if (result.classLeveledUp)
+            {
+                var codPlayer = _rankService.GetPlayer(player.SteamID);
+                if (codPlayer?.SelectedClassName != null)
+                    _hudService.ShowClassLevelUp(player, codPlayer.SelectedClassName, result.classNewLevel);
+            }
         }
         return HookResult.Continue;
     }
@@ -147,6 +159,13 @@ public class RoundEvents
             player.PrintToChat(
                 $" {ChatColors.Green}[COD MOD]{ChatColors.Default} " +
                 $"{ChatColors.Green}+{RankService.POINTS_BOMB_PLANT}{ChatColors.Default} (bomb plant)");
+            _hudService.ShowRankChange(player, result.oldRank, result.newRank);
+            if (result.classLeveledUp)
+            {
+                var codPlayer = _rankService.GetPlayer(player.SteamID);
+                if (codPlayer?.SelectedClassName != null)
+                    _hudService.ShowClassLevelUp(player, codPlayer.SelectedClassName, result.classNewLevel);
+            }
         }
         return HookResult.Continue;
     }
@@ -161,6 +180,13 @@ public class RoundEvents
             player.PrintToChat(
                 $" {ChatColors.Green}[COD MOD]{ChatColors.Default} " +
                 $"{ChatColors.Green}+{RankService.POINTS_BOMB_DEFUSED}{ChatColors.Default} (bomb defuse)");
+            _hudService.ShowRankChange(player, result.oldRank, result.newRank);
+            if (result.classLeveledUp)
+            {
+                var codPlayer = _rankService.GetPlayer(player.SteamID);
+                if (codPlayer?.SelectedClassName != null)
+                    _hudService.ShowClassLevelUp(player, codPlayer.SelectedClassName, result.classNewLevel);
+            }
 
             foreach (var ct in Utilities.GetPlayers().Where(p =>
                 p?.IsValid == true && !p.IsBot &&
@@ -171,6 +197,13 @@ public class RoundEvents
                 ct.PrintToChat(
                     $" {ChatColors.Green}[COD MOD]{ChatColors.Default} " +
                     $"{ChatColors.Green}+{RankService.POINTS_BOMB_DEFUSED_OTHERS}{ChatColors.Default} (bomb defuse — team)");
+                _hudService.ShowRankChange(ct, ctResult.oldRank, ctResult.newRank);
+                if (ctResult.classLeveledUp)
+                {
+                    var codCt = _rankService.GetPlayer(ct.SteamID);
+                    if (codCt?.SelectedClassName != null)
+                        _hudService.ShowClassLevelUp(ct, codCt.SelectedClassName, ctResult.classNewLevel);
+                }
             }
         }
         return HookResult.Continue;
@@ -186,6 +219,13 @@ public class RoundEvents
             terrorist.PrintToChat(
                 $" {ChatColors.Green}[COD MOD]{ChatColors.Default} " +
                 $"{ChatColors.Green}+{RankService.POINTS_BOMB_EXPLODED}{ChatColors.Default} (bomb explode)");
+            _hudService.ShowRankChange(terrorist, result.oldRank, result.newRank);
+            if (result.classLeveledUp)
+            {
+                var codPlayer = _rankService.GetPlayer(terrorist.SteamID);
+                if (codPlayer?.SelectedClassName != null)
+                    _hudService.ShowClassLevelUp(terrorist, codPlayer.SelectedClassName, result.classNewLevel);
+            }
         }
         return HookResult.Continue;
     }
@@ -200,6 +240,13 @@ public class RoundEvents
             player.PrintToChat(
                 $" {ChatColors.Green}[COD MOD]{ChatColors.Default} " +
                 $"{ChatColors.Green}+{RankService.POINTS_BOMB_PICKUP}{ChatColors.Default} (bomb pickup)");
+            _hudService.ShowRankChange(player, result.oldRank, result.newRank);
+            if (result.classLeveledUp)
+            {
+                var codPlayer = _rankService.GetPlayer(player.SteamID);
+                if (codPlayer?.SelectedClassName != null)
+                    _hudService.ShowClassLevelUp(player, codPlayer.SelectedClassName, result.classNewLevel);
+            }
         }
         return HookResult.Continue;
     }
@@ -214,6 +261,7 @@ public class RoundEvents
             player.PrintToChat(
                 $" {ChatColors.Red}[COD MOD]{ChatColors.Default} " +
                 $"{ChatColors.Red}{RankService.POINTS_BOMB_DROP}{ChatColors.Default} (bomb drop)");
+            _hudService.ShowRankChange(player, result.oldRank, result.newRank);
         }
         return HookResult.Continue;
     }
