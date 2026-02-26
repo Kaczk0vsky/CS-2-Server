@@ -245,6 +245,11 @@ public class CodMod : BasePlugin
         RegisterEventHandler<EventBombExploded>(_roundEvents.OnBombExploded);
         RegisterEventHandler<EventBombPickup>(_roundEvents.OnBombPickup);
         RegisterEventHandler<EventBombDropped>(_roundEvents.OnBombDropped);
+
+        RegisterEventHandler<EventBuymenuOpen>((@event, info) =>
+        {
+            return HookResult.Stop;
+        });
     
         // --- Player connect/disconnect ---
         RegisterEventHandler<EventPlayerConnectFull>((@event, info) =>
@@ -349,6 +354,19 @@ public class CodMod : BasePlugin
 
             var codPlayer = _rankService.GetPlayer(attacker.SteamID);
             if (codPlayer == null) return HookResult.Continue;
+
+            var victimPawn = victim.PlayerPawn.Value;
+            if (victimPawn == null)
+                return HookResult.Continue;
+
+            int damage = @event.DmgHealth;
+            int currentHp = victimPawn.Health;
+
+            if (currentHp - damage <= 0)
+            {
+                victim.RemoveWeapons();         // remove weapons moment before death
+                victim.RemoveItemBySlot(0);     // remove granades
+            }
 
             if (codPlayer.SelectedClassName != "Ninja" && codPlayer.SelectedClassName != "Komandos")
                 return HookResult.Continue;
