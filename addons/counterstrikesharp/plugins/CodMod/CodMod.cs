@@ -54,6 +54,21 @@ public class CodMod : BasePlugin
     {
         Console.WriteLine($"[CodMod] Loading plugin {ModuleVersion}...");
 
+         // Prevent weapon dropping
+        Server.ExecuteCommand("mp_drop_knife_enable 0");
+        Server.ExecuteCommand("mp_death_drop_gun 0");
+        Server.ExecuteCommand("mp_death_drop_grenade 0");
+        Server.ExecuteCommand("mp_death_drop_taser 0");
+        Server.ExecuteCommand("mp_death_drop_healthshot 0");
+        
+        // Prevent buy menu / in-game shop
+        Server.ExecuteCommand("mp_buy_anywhere 0");
+        Server.ExecuteCommand("mp_buy_during_immunity 0");
+        Server.ExecuteCommand("sv_buy_status_override 1");
+
+        // Add armor + kevlar as default
+        Server.ExecuteCommand("mp_max_armor 2");
+
         // Initialize services
         _rankService = new RankService(_players);
         _hudService = new HudService(_rankService);
@@ -181,7 +196,7 @@ public class CodMod : BasePlugin
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════
+    // ═════════════���═════════════════════════════════════════════════
     // COMMANDS — Menu Navigation
     // ═══════════════════════════════════════════════════════════════
 
@@ -250,7 +265,7 @@ public class CodMod : BasePlugin
         {
             return HookResult.Stop;
         });
-    
+
         // --- Player connect/disconnect ---
         RegisterEventHandler<EventPlayerConnectFull>((@event, info) =>
         {
@@ -384,22 +399,10 @@ public class CodMod : BasePlugin
                 if (!right)
                     return HookResult.Continue; // only kill when right-click
 
-
                 victim.PlayerPawn.Value!.Health = 0;
             }
 
             return HookResult.Continue;
-        });
-
-        // --- Double jump handled via button listener now (old EventPlayerJump logic removed) ---
-        // logic below in OnPlayerButtonsChanged will track presses/releases and apply
-        // a second jump mid-air; the spawn handler still initializes counters.
-
-
-        // --- Map start ---
-        RegisterListener<Listeners.OnMapStart>((mapName) =>
-        {
-            _rankService.ResetGameRules();
         });
 
         // --- Button listener for menu navigation and class abilities ---
@@ -590,7 +593,6 @@ public class CodMod : BasePlugin
         // Reset to defaults before applying class modifiers
         player.SetHp(100);
         pawn.MaxHealth = 100;
-        pawn.ArmorValue = 100;
         player.SetSpeed(1.0f);
         player.SetGravity(1.0f);
 
@@ -601,23 +603,19 @@ public class CodMod : BasePlugin
                 break;
             case "Snajper":
                 player.SetHp(110);
-                pawn.ArmorValue = 100;
                 break;
             case "Komandos":
                 player.SetHp(105);
-                pawn.ArmorValue = 100;
                 player.SetSpeed(1.4f);
                 break;
             case "Strzelec wyborowy":
                 player.SetHp(200);
-                pawn.ArmorValue = 100;
                 player.SetSpeed(0.6f);
                 player.SetGravity(1.5f);
                 break;
             case "Ninja":
                 player.SetHp(50);
                 pawn.MaxHealth = 50;
-                pawn.ArmorValue = 100;
                 player.SetGravity(0.25f);
                 player.SetSpeed(1.1f);
                 break;

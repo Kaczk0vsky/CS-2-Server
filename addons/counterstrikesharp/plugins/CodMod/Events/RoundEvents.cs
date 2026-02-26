@@ -17,7 +17,10 @@ public class RoundEvents
     }
 
     public HookResult OnRoundStart(EventRoundStart @event, GameEventInfo info)
-    {
+    {   
+        // Ensure players start with armor + kevlar
+        Server.ExecuteCommand("mp_free_armor 2");
+        
         // Reset kill streaks
         foreach (var player in Utilities.GetPlayers())
         {
