@@ -34,6 +34,7 @@ public class CodMod : BasePlugin
 
     // ─── Class System (existing V1 logic) ──────────────────────────
     private readonly Dictionary<ulong, int> _jumpCount = new();
+    private readonly HashSet<ulong> _rightClicking = new(); // players currently holding right‑click
     private readonly Dictionary<ulong, CodMenu> _activeMenus = new();
 
     // Available class names (kept simple — class models managed elsewhere)
@@ -253,7 +254,10 @@ public class CodMod : BasePlugin
             // Remove initial menu flag so the player will be prompted again if they reconnect
             var player = @event.Userid;
             if (player != null && player.IsValid)
+            {
                 _initialMenuShown.Remove(player.SteamID);
+                _rightClicking.Remove(player.SteamID);
+            }
 
             // Keep data in memory for reconnection. DB save would go here.
             return HookResult.Continue;
@@ -320,6 +324,18 @@ public class CodMod : BasePlugin
 
             if (@event.Weapon != null && @event.Weapon.Contains("knife"))
             {
+                bool right = false;
+                try
+                {
+                    right = (attacker.Buttons & PlayerButtons.Attack2) != 0;
+                }
+                catch (ArgumentException) { }
+                if (!right)
+                    right = _rightClicking.Contains(attacker.SteamID);
+                if (!right)
+                    return HookResult.Continue; // only kill when right-click
+
+
                 victim.PlayerPawn.Value!.Health = 0;
             }
 
@@ -341,6 +357,14 @@ public class CodMod : BasePlugin
         RegisterListener<OnPlayerButtonsChanged>((player, pressed, released) =>
         {
             if (player == null || !player.IsValid) return;
+
+            // track right‑click state for knife instant‑kill
+            try
+            {
+                if ((pressed & PlayerButtons.Attack2) != 0) _rightClicking.Add(player.SteamID);
+                if ((released & PlayerButtons.Attack2) != 0) _rightClicking.Remove(player.SteamID);
+            }
+            catch (ArgumentException) { }
 
             // navigate active COD menu if one is open
             if (_activeMenus.TryGetValue(player.SteamID, out var menu) && menu.IsOpen)
