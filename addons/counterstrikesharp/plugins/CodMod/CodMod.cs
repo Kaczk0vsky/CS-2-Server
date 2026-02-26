@@ -40,9 +40,19 @@ public class CodMod : BasePlugin
     // Available class names (kept simple — class models managed elsewhere)
     private static readonly string[] ClassNames = { "Snajper", "Komandos", "Strzelec wyborowy", "Ninja" };
 
+    // Define allowed weapons for each class
+    private static readonly Dictionary<string, HashSet<string>> ClassWeapons = new()
+    {
+        { "None", new() { "weapon_hkp2000", "weapon_usp_silencer", "weapon_glock", "weapon_knife", "weapon_knife_t" } },
+        { "Snajper", new() { "weapon_awp", "weapon_deagle", "weapon_knife", "weapon_knife_t" } },
+        { "Komandos", new() { "weapon_deagle", "weapon_knife", "weapon_knife_t" } },
+        { "Strzelec wyborowy", new() { "weapon_ak47", "weapon_fiveseven", "weapon_knife", "weapon_knife_t" } },
+        { "Ninja", new() { "weapon_knife", "weapon_knife_t" } }
+    };
+
     public override void Load(bool hotReload)
     {
-        Console.WriteLine("[CodMod] Loading plugin v2.0...");
+        Console.WriteLine($"[CodMod] Loading plugin {ModuleVersion}...");
 
         // Initialize services
         _rankService = new RankService(_players);
@@ -53,6 +63,7 @@ public class CodMod : BasePlugin
         RegisterClassCommands();
         RegisterRankCommands();
         RegisterMenuCommands();
+        RegisterCommandsListeners();
         RegisterGameEvents();
         RegisterTimers();
 
@@ -208,6 +219,17 @@ public class CodMod : BasePlugin
     }
 
     // ═══════════════════════════════════════════════════════════════
+    // COMMANDS LISTENERS
+    // ═══════════════════════════════════════════════════════════════
+
+    private void RegisterCommandsListeners()
+    {
+        AddCommandListener("buy", (_, _) => HookResult.Stop);
+        AddCommandListener("autobuy", (_, _) => HookResult.Stop);
+        AddCommandListener("rebuy", (_, _) => HookResult.Stop);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
     // GAME EVENTS
     // ═══════════════════════════════════════════════════════════════
 
@@ -223,7 +245,7 @@ public class CodMod : BasePlugin
         RegisterEventHandler<EventBombExploded>(_roundEvents.OnBombExploded);
         RegisterEventHandler<EventBombPickup>(_roundEvents.OnBombPickup);
         RegisterEventHandler<EventBombDropped>(_roundEvents.OnBombDropped);
-
+    
         // --- Player connect/disconnect ---
         RegisterEventHandler<EventPlayerConnectFull>((@event, info) =>
         {
@@ -267,18 +289,23 @@ public class CodMod : BasePlugin
         RegisterEventHandler<EventPlayerSpawn>((@event, info) =>
         {
             var player = @event.Userid;
-            if (player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
+            if (player == null || !player.IsValid) return HookResult.Continue;
 
             var codPlayer = _rankService.GetPlayer(player.SteamID);
             if (codPlayer == null) return HookResult.Continue;
 
-            // when player first enters either team, show class menu once
-            if (!_initialMenuShown.Contains(player.SteamID) &&
-                codPlayer.SelectedClassName == null &&
-                (player.Team == CsTeam.CounterTerrorist || player.Team == CsTeam.Terrorist))
+            // For non-bot players: show class menu on first team join
+            if (!player.IsBot)
             {
-                _initialMenuShown.Add(player.SteamID);
-                OpenClassMenu(player);
+                // when player first enters either team, show class menu once
+                if (!_initialMenuShown.Contains(player.SteamID) &&
+                    codPlayer.SelectedClassName == null &&
+                    (player.Team == CsTeam.CounterTerrorist || player.Team == CsTeam.Terrorist))
+                {
+                    _initialMenuShown.Add(player.SteamID);
+                    OpenClassMenu(player);
+                    return HookResult.Continue;
+                }
             }
 
             // Activate pending class
@@ -292,7 +319,11 @@ public class CodMod : BasePlugin
                     $"Grasz jako: {ChatColors.Blue}{codPlayer.SelectedClassName}");
             }
 
-            if (codPlayer.SelectedClassName == null) return HookResult.Continue;
+            // If no class selected yet, assign default "None" class
+            if (codPlayer.SelectedClassName == null)
+            {
+                codPlayer.SelectedClassName = "None";
+            }
 
             _jumpCount[player.SteamID] = 0;
 
@@ -503,6 +534,17 @@ public class CodMod : BasePlugin
 
         switch (className)
         {
+            case "None":
+                // Default weapons based on team
+                if (player.Team == CsTeam.CounterTerrorist)
+                {
+                    player.GiveNamedItem("weapon_usp_silencer");
+                }
+                else if (player.Team == CsTeam.Terrorist)
+                {
+                    player.GiveNamedItem("weapon_glock");
+                }
+                break;
             case "Snajper":
                 player.GiveNamedItem("weapon_awp");
                 player.GiveNamedItem("weapon_deagle");
@@ -536,6 +578,9 @@ public class CodMod : BasePlugin
 
         switch (className)
         {
+            case "None":
+                // None class
+                break;
             case "Snajper":
                 player.SetHp(110);
                 pawn.ArmorValue = 100;

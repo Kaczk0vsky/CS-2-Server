@@ -1,0 +1,62 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "addons", "addons", "{E1748B93-FA13-C50B-BD89-C3B777E73FCB}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "counterstrikesharp", "counterstrikesharp", "{3746DFB6-41EA-80B4-2BDC-2E1B6DB04F65}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "plugins", "plugins", "{DC63EE36-BB50-60BE-74C8-DCD4A005B522}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BasePlugin", "addons\counterstrikesharp\plugins\BasePlugin\BasePlugin.csproj", "{003ACAB7-BD08-8CA4-ECB8-8F43A0ABE328}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodMod", "addons\counterstrikesharp\plugins\CodMod\CodMod.csproj", "{75F0EB85-C07F-29F8-5B9C-D77EAFFB676C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "plugins_archive", "plugins_archive", "{EA1BBC52-DD91-04E7-9258-F9DE21552395}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CodModv2", "CodModv2", "{759059E5-1B3C-F893-0F88-5D4F0E3990EA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodMod", "addons\counterstrikesharp\plugins_archive\CodModv2\CodMod.csproj", "{653E953D-28B9-0559-B07E-794844EA76BA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleRank", "addons\counterstrikesharp\plugins_archive\SimpleRank\SimpleRank.csproj", "{D439B028-15F8-431D-2388-F65809722FFF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{003ACAB7-BD08-8CA4-ECB8-8F43A0ABE328}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{003ACAB7-BD08-8CA4-ECB8-8F43A0ABE328}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{003ACAB7-BD08-8CA4-ECB8-8F43A0ABE328}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{003ACAB7-BD08-8CA4-ECB8-8F43A0ABE328}.Release|Any CPU.Build.0 = Release|Any CPU
+		{75F0EB85-C07F-29F8-5B9C-D77EAFFB676C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{75F0EB85-C07F-29F8-5B9C-D77EAFFB676C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{75F0EB85-C07F-29F8-5B9C-D77EAFFB676C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{75F0EB85-C07F-29F8-5B9C-D77EAFFB676C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{653E953D-28B9-0559-B07E-794844EA76BA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{653E953D-28B9-0559-B07E-794844EA76BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{653E953D-28B9-0559-B07E-794844EA76BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{653E953D-28B9-0559-B07E-794844EA76BA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D439B028-15F8-431D-2388-F65809722FFF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D439B028-15F8-431D-2388-F65809722FFF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D439B028-15F8-431D-2388-F65809722FFF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D439B028-15F8-431D-2388-F65809722FFF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{3746DFB6-41EA-80B4-2BDC-2E1B6DB04F65} = {E1748B93-FA13-C50B-BD89-C3B777E73FCB}
+		{DC63EE36-BB50-60BE-74C8-DCD4A005B522} = {3746DFB6-41EA-80B4-2BDC-2E1B6DB04F65}
+		{003ACAB7-BD08-8CA4-ECB8-8F43A0ABE328} = {DC63EE36-BB50-60BE-74C8-DCD4A005B522}
+		{75F0EB85-C07F-29F8-5B9C-D77EAFFB676C} = {DC63EE36-BB50-60BE-74C8-DCD4A005B522}
+		{EA1BBC52-DD91-04E7-9258-F9DE21552395} = {3746DFB6-41EA-80B4-2BDC-2E1B6DB04F65}
+		{759059E5-1B3C-F893-0F88-5D4F0E3990EA} = {EA1BBC52-DD91-04E7-9258-F9DE21552395}
+		{653E953D-28B9-0559-B07E-794844EA76BA} = {759059E5-1B3C-F893-0F88-5D4F0E3990EA}
+		{D439B028-15F8-431D-2388-F65809722FFF} = {EA1BBC52-DD91-04E7-9258-F9DE21552395}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {893AEDF9-098E-4E41-B334-62E2828F74F2}
+	EndGlobalSection
+EndGlobal

@@ -23,12 +23,6 @@ public class KillEvents
         var attacker = @event.Attacker;
         var assister = @event.Assister;
 
-        // Prevent the victim's weapons from dropping by clearing inventory immediately.
-        if (victim != null && victim.IsValid)
-        {
-            victim.RemoveWeapons();
-        }
-
         // --- Victim loses points ---
         if (victim != null && victim.IsValid && !victim.IsBot)
         {
