@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
+﻿using System.Drawing;
 using CodMod.Events;
 using CodMod.Models;
 using CodMod.Services;
+using CodMod.Extensions;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using OnPlayerButtonsChanged = CounterStrikeSharp.API.Core.Listeners.OnPlayerButtonsChanged;
@@ -16,6 +14,9 @@ namespace CodMod;
 public class CodMod : BasePlugin
 {
     public override string ModuleName => "Cod Mod";
+
+    // remember which players have already been shown the initial class menu
+    private readonly HashSet<ulong> _initialMenuShown = new();
     public override string ModuleVersion => "2.0.0";
     public override string ModuleAuthor => "Kaczk0vsky, RafGor";
     public override string ModuleDescription => "CoD Mod with integrated ranking system";
@@ -239,7 +240,7 @@ public class CodMod : BasePlugin
                 player.PrintToChat($" {ChatColors.Green}[COD MOD]{ChatColors.Default} Ranga: {RankService.GetRankColorCode(rank)}{rank.Name}{ChatColors.Default} | Punkty: {ChatColors.Blue}{codPlayer.GlobalPoints}");
 
                 if (codPlayer.SelectedClassName == null)
-                    player.PrintToChat($" {ChatColors.Green}[COD MOD]{ChatColors.Default} Wpisz {ChatColors.Yellow}klasa{ChatColors.Default} aby wybrać klasę!");
+                    player.PrintToChat($" {ChatColors.Green}[COD MOD]{ChatColors.Default} Wpisz {ChatColors.Yellow}/klasa{ChatColors.Default} aby wybrać klasę!");
                 else
                     player.PrintToChat($" {ChatColors.Green}[COD MOD]{ChatColors.Default} Klasa: {ChatColors.Green}{codPlayer.SelectedClassName}");
             });
@@ -249,6 +250,11 @@ public class CodMod : BasePlugin
 
         RegisterEventHandler<EventPlayerDisconnect>((@event, info) =>
         {
+            // Remove initial menu flag so the player will be prompted again if they reconnect
+            var player = @event.Userid;
+            if (player != null && player.IsValid)
+                _initialMenuShown.Remove(player.SteamID);
+
             // Keep data in memory for reconnection. DB save would go here.
             return HookResult.Continue;
         });
@@ -261,6 +267,15 @@ public class CodMod : BasePlugin
 
             var codPlayer = _rankService.GetPlayer(player.SteamID);
             if (codPlayer == null) return HookResult.Continue;
+
+            // when player first enters either team, show class menu once
+            if (!_initialMenuShown.Contains(player.SteamID) &&
+                codPlayer.SelectedClassName == null &&
+                (player.Team == CsTeam.CounterTerrorist || player.Team == CsTeam.Terrorist))
+            {
+                _initialMenuShown.Add(player.SteamID);
+                OpenClassMenu(player);
+            }
 
             // Activate pending class
             if (codPlayer.PendingClassName != null)
@@ -311,37 +326,10 @@ public class CodMod : BasePlugin
             return HookResult.Continue;
         });
 
-        // --- Double jump (Komandos) ---
-        RegisterEventHandler<EventPlayerJump>((@event, info) =>
-        {
-            var player = @event.Userid;
-            if (player == null || !player.IsValid || !player.PawnIsAlive) return HookResult.Continue;
+        // --- Double jump handled via button listener now (old EventPlayerJump logic removed) ---
+        // logic below in OnPlayerButtonsChanged will track presses/releases and apply
+        // a second jump mid-air; the spawn handler still initializes counters.
 
-            var codPlayer = _rankService.GetPlayer(player.SteamID);
-            if (codPlayer == null || codPlayer.SelectedClassName != "Komandos") return HookResult.Continue;
-
-            var pawn = player.PlayerPawn.Value;
-            if (pawn == null) return HookResult.Continue;
-
-            bool onGround = (pawn.Flags & (uint)PlayerFlags.FL_ONGROUND) != 0;
-
-            if (!_jumpCount.ContainsKey(player.SteamID))
-                _jumpCount[player.SteamID] = 0;
-
-            if (onGround)
-            {
-                _jumpCount[player.SteamID] = 1;
-                return HookResult.Continue;
-            }
-
-            if (_jumpCount[player.SteamID] >= 2) return HookResult.Continue;
-
-            _jumpCount[player.SteamID]++;
-            var currentVelocity = pawn.AbsVelocity;
-            pawn.Teleport(null, null, new Vector(currentVelocity.X, currentVelocity.Y, 300));
-
-            return HookResult.Continue;
-        });
 
         // --- Map start ---
         RegisterListener<Listeners.OnMapStart>((mapName) =>
@@ -349,23 +337,59 @@ public class CodMod : BasePlugin
             _rankService.ResetGameRules();
         });
 
-        // --- Button listener for menu navigation ---
+        // --- Button listener for menu navigation and class abilities ---
         RegisterListener<OnPlayerButtonsChanged>((player, pressed, released) =>
         {
             if (player == null || !player.IsValid) return;
-            if (!_activeMenus.TryGetValue(player.SteamID, out var menu) || !menu.IsOpen) return;
 
-            if ((pressed & PlayerButtons.Forward) != 0) menu.PreviousOption(player);
-            if ((pressed & PlayerButtons.Back) != 0) menu.NextOption(player);
-            if ((pressed & PlayerButtons.Use) != 0)
+            // navigate active COD menu if one is open
+            if (_activeMenus.TryGetValue(player.SteamID, out var menu) && menu.IsOpen)
             {
-                menu.SelectCurrent(player);
-                _activeMenus.Remove(player.SteamID);
+                if ((pressed & PlayerButtons.Forward) != 0) menu.PreviousOption(player);
+                if ((pressed & PlayerButtons.Back) != 0) menu.NextOption(player);
+                if ((pressed & PlayerButtons.Use) != 0)
+                {
+                    menu.SelectCurrent(player);
+                    _activeMenus.Remove(player.SteamID);
+                }
+                if ((pressed & PlayerButtons.Scoreboard) != 0)
+                {
+                    menu.Close(player);
+                    _activeMenus.Remove(player.SteamID);
+                }
             }
-            if ((pressed & PlayerButtons.Scoreboard) != 0)
+
+            // --- double jump for Komandos ---
+            const PlayerButtons JumpMask = (PlayerButtons)2; // IN_JUMP bit (source engine)
+            if (player.PawnIsAlive)
             {
-                menu.Close(player);
-                _activeMenus.Remove(player.SteamID);
+                var codPlayer = _rankService.GetPlayer(player.SteamID);
+                if (codPlayer != null && codPlayer.SelectedClassName == "Komandos")
+                {
+                    var pawn = player.PlayerPawn.Value;
+                    if (pawn != null)
+                    {
+                        bool onGround = (pawn.Flags & (uint)PlayerFlags.FL_ONGROUND) != 0;
+
+                        if (onGround)
+                        {
+                            _jumpCount[player.SteamID] = 0;
+                        }
+
+                        // when jump key is pressed while airborne, give second boost
+                        if ((pressed & JumpMask) != 0 && !onGround)
+                        {
+                            int count = 0;
+                            _jumpCount.TryGetValue(player.SteamID, out count);
+                            if (count < 2)
+                            {
+                                _jumpCount[player.SteamID] = count + 1;
+                                var vel = pawn.AbsVelocity;
+                                pawn.Teleport(null, null, new Vector(vel.X, vel.Y, 300));
+                            }
+                        }
+                    }
+                }
             }
         });
     }
@@ -376,8 +400,22 @@ public class CodMod : BasePlugin
 
     private void RegisterTimers()
     {
+        // keep ninja invisibility updated
         AddTimer(0.2f, CheckNinjaInvisibility, TimerFlags.REPEAT);
-        AddTimer(0.5f, MaintainClassGravity, TimerFlags.REPEAT);
+
+        // reset jump counters when players land on ground (safety net)
+        AddTimer(0.2f, () =>
+        {
+            foreach (var player in Utilities.GetPlayers())
+            {
+                if (player == null || !player.IsValid || !player.PawnIsAlive) continue;
+                var pawn = player.PlayerPawn.Value;
+                if (pawn == null) continue;
+                bool onGround = (pawn.Flags & (uint)PlayerFlags.FL_ONGROUND) != 0;
+                if (onGround)
+                    _jumpCount.Remove(player.SteamID);
+            }
+        }, TimerFlags.REPEAT);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -407,6 +445,8 @@ public class CodMod : BasePlugin
     private void SetClass(CCSPlayerController player, string className)
     {
         var codPlayer = _rankService.GetOrCreatePlayer(player.SteamID, player.PlayerName);
+        bool wasNew = codPlayer.SelectedClassName == null;
+
         codPlayer.PendingClassName = className;
 
         // Ensure class progress exists
@@ -417,6 +457,15 @@ public class CodMod : BasePlugin
             $"{ChatColors.Green}[COD MOD]{ChatColors.Default} " +
             $"Wybrano: {ChatColors.Blue}{className}{ChatColors.Default} " +
             $"(Lvl {ChatColors.Green}{progress.Level}{ChatColors.Default})");
+
+        // if this is the very first selection and the pawn is alive, apply immediately
+        if (wasNew && player.PawnIsAlive)
+        {
+            codPlayer.SelectedClassName = className;
+            codPlayer.PendingClassName = null;
+            GiveClassEquipment(player, className);
+            ApplyClassStats(player, className);
+        }
     }
 
     private void GiveClassEquipment(CCSPlayerController player, string className)
@@ -454,50 +503,38 @@ public class CodMod : BasePlugin
         var pawn = player.PlayerPawn.Value;
         if (pawn == null) return;
 
-        pawn.GravityScale = 1.0f;
-        pawn.VelocityModifier = 1.0f;
-        pawn.Health = 100;
+        // Reset to defaults before applying class modifiers
+        player.SetHp(100);
         pawn.MaxHealth = 100;
-        pawn.ArmorValue = 0;
+        pawn.ArmorValue = 100;
+        player.SetSpeed(1.0f);
+        player.SetGravity(1.0f);
 
         switch (className)
         {
             case "Snajper":
-                pawn.Health = pawn.MaxHealth = 110;
+                player.SetHp(110);
                 pawn.ArmorValue = 100;
                 break;
             case "Komandos":
-                pawn.Health = pawn.MaxHealth = 105;
+                player.SetHp(105);
                 pawn.ArmorValue = 100;
-                pawn.VelocityModifier = 1.2f;
+                player.SetSpeed(1.4f);
                 break;
             case "Strzelec wyborowy":
-                pawn.Health = pawn.MaxHealth = 200;
+                player.SetHp(200);
                 pawn.ArmorValue = 100;
-                pawn.VelocityModifier = 0.5f;
-                pawn.GravityScale = 2f;
+                player.SetSpeed(0.6f);
+                player.SetGravity(1.5f);
                 break;
             case "Ninja":
-                pawn.Health = pawn.MaxHealth = 50;
+                player.SetHp(50);
+                pawn.MaxHealth = 50;
                 pawn.ArmorValue = 100;
-                pawn.GravityScale = 0.1f;
-                pawn.VelocityModifier = 1.25f;
+                player.SetGravity(0.25f);
+                player.SetSpeed(1.1f);
                 break;
         }
-
-        Utilities.SetStateChanged(pawn, "CBaseEntity", "m_iHealth");
-        Utilities.SetStateChanged(pawn, "CCSPlayerPawn", "m_ArmorValue");
-        Utilities.SetStateChanged(pawn, "CBaseEntity", "m_flVelocityModifier");
-        Utilities.SetStateChanged(pawn, "CBaseEntity", "m_flGravityScale");
-        pawn.Teleport(pawn.AbsOrigin, pawn.AbsRotation, pawn.AbsVelocity);
-
-        AddTimer(0.05f, () =>
-        {
-            if (!player.IsValid || !player.PawnIsAlive) return;
-            var updatedPawn = player.PlayerPawn.Value;
-            if (updatedPawn != null)
-                Utilities.SetStateChanged(updatedPawn, "CBaseEntity", "m_flGravityScale");
-        });
     }
 
     private void CheckNinjaInvisibility()
@@ -516,27 +553,6 @@ public class CodMod : BasePlugin
                 pawn.Render = Color.FromArgb(0, 255, 255, 255);
             else
                 pawn.Render = Color.FromArgb(50, 255, 255, 255);
-        }
-    }
-
-    private void MaintainClassGravity()
-    {
-        foreach (var player in Utilities.GetPlayers())
-        {
-            if (player == null || !player.IsValid || !player.PawnIsAlive) continue;
-
-            var codPlayer = _rankService.GetPlayer(player.SteamID);
-            if (codPlayer == null || codPlayer.SelectedClassName == null) continue;
-
-            var pawn = player.PlayerPawn.Value;
-            if (pawn == null) continue;
-
-            if (codPlayer.SelectedClassName == "Strzelec wyborowy")
-                pawn.GravityScale = 2f;
-            else if (codPlayer.SelectedClassName == "Ninja")
-                pawn.GravityScale = 0.1f;
-            else
-                pawn.GravityScale = 1.0f;
         }
     }
 }

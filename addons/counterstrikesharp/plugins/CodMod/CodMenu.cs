@@ -44,17 +44,18 @@ namespace CodMod
 
         private void PrintToPlayer(CCSPlayerController player)
         {
+            // Yellow Title
             var html = "<center>" +
-                       $"<h2>{Title}</h2>" +
+                       $"<h2><font color='yellow'>{Title}</font></h2>" +
                        "<br/>";
             for (int i = 0; i < Options.Count; i++)
             {
-                var color = i == _currentIndex ? "blue" : "white";
+                // White for unselected, Selected with a deeper yellow/gold shade
+                var color = i == _currentIndex ? "#c2c204" : "white";
                 html += $"<font color='{color}'>{Options[i].Text}</font><br/>";
             }
             html += "</center>";
 
-            // Display for 90 seconds (window will be kept alive by refresh timer)
             player.PrintToCenterHtml(html, 90);
         }
 
