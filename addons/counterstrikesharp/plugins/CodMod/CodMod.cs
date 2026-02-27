@@ -342,7 +342,7 @@ public class CodMod : BasePlugin
 
             // Wampir — +15 HP za każde zabójstwo
             if (ClassAbilities.HasHealOnKill(codPlayer.SelectedClassName))
-                ClassAbilities.ApplyHealOnKill(attacker);
+                ClassAbilities.ApplyHealOnKill(attacker, codPlayer.SelectedClassName);
 
             return HookResult.Continue;
         }, HookMode.Post);
@@ -496,6 +496,18 @@ public class CodMod : BasePlugin
                 return HookResult.Continue;
             }
 
+            // Class: Gladiator — 50% headshot instakill z FAMAS
+            if (ClassAbilities.TryApplyHeadshotInstakill(
+                    attacker, victim, codPlayer.SelectedClassName,
+                    @event.Weapon, @event.Hitgroup, isEnemy))
+                return HookResult.Continue;
+
+            // Class: Egzekutor — 15% instakill z Tec-9 z każdego trafienia
+            if (ClassAbilities.TryApplyInstakillChance(
+                    attacker, victim, codPlayer.SelectedClassName,
+                    @event.Weapon, isEnemy))
+                return HookResult.Continue;
+
             ClassAbilities.TryApplyKnifeInstakill(
                 attacker,
                 victim,
@@ -567,8 +579,8 @@ public class CodMod : BasePlugin
 
     private void RegisterTimers()
     {
-        // keep ninja invisibility updated
-        AddTimer(0.2f, CheckNinjaInvisibility, TimerFlags.REPEAT);
+        // stealth / berserk efekty (Ninja, Widmo, Berserker)
+        AddTimer(0.2f, CheckPlayerVisibilityEffects, TimerFlags.REPEAT);
 
         // keep class movement modifiers consistent (CS2 can override speed after damage)
         AddTimer(0.2f, () =>
@@ -890,7 +902,8 @@ public class CodMod : BasePlugin
         Server.ExecuteCommand("mp_max_armor 2");
     }
 
-    private void CheckNinjaInvisibility()
+    // Ticked co 0.2s — Ninja stealth, Widmo crouch-stealth, Berserker berserk speed.
+    private void CheckPlayerVisibilityEffects()
     {
         foreach (var player in Utilities.GetPlayers())
         {
@@ -900,6 +913,8 @@ public class CodMod : BasePlugin
             if (codPlayer == null) continue;
 
             ClassAbilities.ApplyStealthInvisibility(player, codPlayer.SelectedClassName);
+            ClassAbilities.ApplyCrouchStealth(player, codPlayer.SelectedClassName);
+            ClassAbilities.ApplyBerserkMode(player, codPlayer.SelectedClassName, _rankService);
         }
     }
 }
