@@ -464,15 +464,6 @@ public class CodMod : BasePlugin
                 }
             }
 
-            if (currentHp - damage <= 0)
-            {
-                bool victimHadC4 = HasC4(victim);
-                victim.RemoveWeapons();
-                if (victimHadC4)
-                {
-                    victim.GiveNamedItem("weapon_c4");
-                }
-            }
 
             bool hasHeInstakillPerk = Perks.HasHeGrenadeInstantKill(codPlayer.ActivePerkName);
             bool isHeDamage = !string.IsNullOrEmpty(@event.Weapon) &&
@@ -610,20 +601,6 @@ public class CodMod : BasePlugin
     }
 
     /// <summary>
-    /// Checks whether the player currently has C4 in their inventory.
-    /// </summary>
-    private static bool HasC4(CCSPlayerController player)
-    {
-        var pawn = player.PlayerPawn.Value;
-        if (pawn?.WeaponServices == null) return false;
-
-        foreach (var weapon in pawn.WeaponServices.MyWeapons)
-        {
-            if (weapon.Value?.DesignerName == "weapon_c4")
-                return true;
-        }
-        return false;
-    }
 
     private void GiveClassEquipment(CCSPlayerController player, string className)
     {
@@ -656,11 +633,6 @@ public class CodMod : BasePlugin
         }
 
         player.GiveNamedItem("weapon_knife");
-
-        if (hadC4)
-        {
-            player.GiveNamedItem("weapon_c4");
-        }
     }
 
     private void ApplyClassStats(CCSPlayerController player, string className)
