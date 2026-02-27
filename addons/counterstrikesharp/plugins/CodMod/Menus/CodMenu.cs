@@ -49,18 +49,33 @@ namespace CodMod
         /// </summary>
         public void Refresh(CCSPlayerController player) => PrintToPlayer(player);
 
+        private const int PageSize = 4;
+
         private void PrintToPlayer(CCSPlayerController player)
         {
-            // Yellow Title
+            int total = Options.Count;
+
+            // Sliding window: keep selected item centred, clamp to valid range
+            int pageStart = Math.Min(
+                Math.Max(0, _currentIndex - PageSize / 2),
+                Math.Max(0, total - PageSize));
+            int pageEnd = Math.Min(pageStart + PageSize, total);
+
             var html = "<center>" +
-                       $"<h2><font color='yellow'>{Title}</font></h2>" +
-                       "<br/>";
-            for (int i = 0; i < Options.Count; i++)
+                       $"<h2><font color='yellow'>{Title}</font></h2>";
+
+            if (pageStart > 0)
+                html += "<font color='gray'>▲</font><br/>";
+
+            for (int i = pageStart; i < pageEnd; i++)
             {
-                // White for unselected, Selected with a deeper yellow/gold shade
                 var color = i == _currentIndex ? "#c2c204" : "white";
                 html += $"<font color='{color}'>{Options[i].Text}</font><br/>";
             }
+
+            if (pageEnd < total)
+                html += "<font color='gray'>▼</font><br/>";
+
             html += "</center>";
 
             player.PrintToCenterHtml(html, 90);
