@@ -16,6 +16,9 @@ public class CodPlayer
     public string? SelectedClassName { get; set; }
     public string? PendingClassName { get; set; }
 
+    // --- Active Perk (rolled after kills) ---
+    public string? ActivePerkName { get; set; }
+
     /// <summary>
     /// Class name → ClassProgress. Tracks XP/Level per class independently.
     /// </summary>

@@ -120,6 +120,7 @@ public class StatsMenu
         int currentXp = classProgress?.Xp ?? 0;
         int nextLevelXp = RankService.GetXpForNextLevel(classLevel);
         int xpPercent = nextLevelXp > 0 ? (currentXp * 100) / nextLevelXp : 0;
+        string perkName = codPlayer.ActivePerkName ?? "None";
 
         // Build progress bar
         string progressBar = GenerateProgressBar(xpPercent, 12);
@@ -127,7 +128,8 @@ public class StatsMenu
         // Build HTML
         var html = "<center>" +
                    $"<h3><font color='#FFD700'>{player.PlayerName}</font></h3>" +
-                   $"<font color='white'>Class: <font color='#00FF00'>{className}</font></font><br/>" +
+                   $"<font color='white'>Klasa: <font color='#00FF00'>{className}</font></font><br/>" +
+                   $"<font color='white'>Perk: <font color='#00FF00'>{perkName}</font></font><br/>" +
                    $"<font color='white'>Level: <font color='#00FF00'>{classLevel}</font></font><br/>" +
                    $"<font color='white'>{progressBar} {xpPercent}%</font><br/>" +
                    $"<font color='#808080' size='1'>XP: {currentXp}/{nextLevelXp}</font><br/>" +

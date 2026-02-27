@@ -1,4 +1,6 @@
 using CodMod.Services;
+using CodMod.Models;
+using CodMod.Extensions;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Utils;
 
@@ -97,6 +99,38 @@ public class KillEvents
                 var attackerPlayer = _rankService.GetPlayer(attacker.SteamID);
                 if (attackerPlayer != null)
                 {
+                    if (string.IsNullOrWhiteSpace(attackerPlayer.ActivePerkName))
+                    {
+                        var perk = Perks.GetRandom();
+                        attackerPlayer.ActivePerkName = perk.Name;
+
+                        if (attacker.PawnIsAlive && Perks.HasHeGrenadeInstantKill(attackerPlayer.ActivePerkName))
+                        {
+                            attacker.GiveNamedItem("weapon_hegrenade");
+                        }
+
+                        if (attacker.PawnIsAlive && attackerPlayer.SelectedClassName != null)
+                        {
+                            var classDefinition = CodClasses.Get(attackerPlayer.SelectedClassName);
+                            var progress = attackerPlayer.GetActiveClassProgress();
+
+                            int statHealthBonus = (progress?.HealthPoints ?? 0) * 2;
+                            int perkHealthBonus = Perks.GetHealthBonus(attackerPlayer.ActivePerkName);
+                            int finalHp = classDefinition.BaseHealth + statHealthBonus + perkHealthBonus;
+
+                            float statSpeedBonus = (progress?.SpeedPoints ?? 0) * 0.005f;
+                            float perkSpeedBonus = Perks.GetSpeedBonus(attackerPlayer.ActivePerkName);
+                            float finalSpeed = Math.Clamp(classDefinition.BaseSpeed + statSpeedBonus + perkSpeedBonus, 0.1f, 2.5f);
+
+                            attacker.SetHp(finalHp);
+                            var attackerPawn = attacker.PlayerPawn.Value;
+                            if (attackerPawn != null)
+                                attackerPawn.MaxHealth = finalHp;
+
+                            attacker.SetSpeed(finalSpeed);
+                        }
+                    }
+
                     var (bonus, streakName) = _rankService.ProcessKillStreak(attackerPlayer);
                     if (bonus > 0 && streakName != null)
                     {
