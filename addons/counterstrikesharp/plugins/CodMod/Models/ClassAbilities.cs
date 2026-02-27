@@ -32,6 +32,7 @@ public static class ClassAbilities
     {
         if (!IsKnifeOneHitClass(attackerClassName)) return false;
         if (string.IsNullOrEmpty(weaponName) || !weaponName.Contains("knife")) return false;
+        if (attacker.Team == victim.Team) return false;
 
         bool right = false;
         try
