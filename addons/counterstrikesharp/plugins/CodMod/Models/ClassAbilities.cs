@@ -1,4 +1,5 @@
 using System.Drawing;
+using CodMod.Extensions;
 using CodMod.Services;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
@@ -6,22 +7,33 @@ using CounterStrikeSharp.API.Modules.Utils;
 
 namespace CodMod.Models;
 
+/// <summary>
+/// Cała logika zdolności klas.
+/// Sprawdzenia zdolności korzystają z ClassAbilityFlags (data-driven) zamiast
+/// hard-coded nazw klas — dodanie klasy z istniejącą zdolnością nie wymaga
+/// żadnych zmian w tym pliku.
+/// </summary>
 public static class ClassAbilities
 {
+    // ═══════════════════════════════════════════════════════════════
+    // SPRAWDZENIA OBECNOŚCI ZDOLNOŚCI  (data-driven via flags)
+    // ═══════════════════════════════════════════════════════════════
+
     public static bool IsKnifeOneHitClass(string? className)
-    {
-        return className == CodClasses.Ninja || className == CodClasses.Komandos;
-    }
+        => CodClasses.Get(className).Abilities.HasFlag(ClassAbilityFlags.KnifeInstakill);
 
     public static bool HasDoubleJump(string? className)
-    {
-        return className == CodClasses.Komandos;
-    }
+        => CodClasses.Get(className).Abilities.HasFlag(ClassAbilityFlags.DoubleJump);
 
     public static bool HasStealthInvisibility(string? className)
-    {
-        return className == CodClasses.Ninja;
-    }
+        => CodClasses.Get(className).Abilities.HasFlag(ClassAbilityFlags.StealthInvisibility);
+
+    public static bool HasHealOnKill(string? className)
+        => CodClasses.Get(className).Abilities.HasFlag(ClassAbilityFlags.HealOnKill);
+
+    // ═══════════════════════════════════════════════════════════════
+    // KNIFE INSTAKILL  (Ninja, Komandos)
+    // ═══════════════════════════════════════════════════════════════
 
     public static bool TryApplyKnifeInstakill(
         CCSPlayerController attacker,
@@ -34,13 +46,8 @@ public static class ClassAbilities
         if (string.IsNullOrEmpty(weaponName) || !weaponName.Contains("knife")) return false;
 
         bool right = false;
-        try
-        {
-            right = (attacker.Buttons & PlayerButtons.Attack2) != 0;
-        }
-        catch (ArgumentException)
-        {
-        }
+        try { right = (attacker.Buttons & PlayerButtons.Attack2) != 0; }
+        catch (ArgumentException) { }
 
         if (!right)
             right = rightClicking.Contains(attacker.SteamID);
@@ -53,6 +60,10 @@ public static class ClassAbilities
         victimPawn.Health = 0;
         return true;
     }
+
+    // ═══════════════════════════════════════════════════════════════
+    // DOUBLE JUMP  (Komandos)
+    // ═══════════════════════════════════════════════════════════════
 
     public static void HandleDoubleJump(
         CCSPlayerController player,
@@ -68,13 +79,11 @@ public static class ClassAbilities
         var pawn = player.PlayerPawn.Value;
         if (pawn == null) return;
 
-        const PlayerButtons JumpMask = (PlayerButtons)2; // IN_JUMP bit (source engine)
+        const PlayerButtons JumpMask = (PlayerButtons)2; // IN_JUMP bit
         bool onGround = (pawn.Flags & (uint)PlayerFlags.FL_ONGROUND) != 0;
 
         if (onGround)
-        {
             jumpCount[player.SteamID] = 0;
-        }
 
         if ((pressed & JumpMask) == 0 || onGround) return;
 
@@ -86,6 +95,10 @@ public static class ClassAbilities
         pawn.Teleport(null, null, new Vector(vel.X, vel.Y, 300));
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // STEALTH INVISIBILITY  (Ninja — niewidzialny gdy stoi)
+    // ═══════════════════════════════════════════════════════════════
+
     public static void ApplyStealthInvisibility(CCSPlayerController player, string? className)
     {
         if (!HasStealthInvisibility(className)) return;
@@ -93,11 +106,28 @@ public static class ClassAbilities
         var pawn = player.PlayerPawn.Value;
         if (pawn == null) return;
 
-        var classDefinition = CodClasses.Get(className);
+        var def = CodClasses.Get(className);
         bool isStationary = pawn.AbsVelocity.Length() < 5f;
 
         pawn.Render = isStationary
-            ? Color.FromArgb(classDefinition.IdleAlpha, 255, 255, 255)
-            : Color.FromArgb(classDefinition.MovingAlpha, 255, 255, 255);
+            ? Color.FromArgb(def.IdleAlpha, 255, 255, 255)
+            : Color.FromArgb(def.MovingAlpha, 255, 255, 255);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // HEAL ON KILL  (Wampir — +15 HP za każde zabójstwo)
+    // ═══════════════════════════════════════════════════════════════
+
+    public const int HealOnKillAmount = 15;
+
+    public static void ApplyHealOnKill(CCSPlayerController attacker)
+    {
+        if (!attacker.PawnIsAlive) return;
+
+        var pawn = attacker.PlayerPawn.Value;
+        if (pawn == null) return;
+
+        int newHp = Math.Min(pawn.MaxHealth, pawn.Health + HealOnKillAmount);
+        attacker.SetHp(newHp);
     }
 }

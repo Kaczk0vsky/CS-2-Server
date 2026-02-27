@@ -325,6 +325,27 @@ public class CodMod : BasePlugin
     {
         // --- Ranking events (delegated to event classes) ---
         RegisterEventHandler<EventPlayerDeath>(_killEvents.OnPlayerDeath);
+
+        // --- Class kill-rewards (post, po rankingowym handlerze) ---
+        RegisterEventHandler<EventPlayerDeath>((@event, info) =>
+        {
+            var attacker = @event.Attacker;
+            var victim   = @event.Userid;
+
+            if (attacker == null || !attacker.IsValid || victim == null) return HookResult.Continue;
+            if (attacker.SteamID == victim.SteamID) return HookResult.Continue;
+            if (attacker.Team == victim.Team) return HookResult.Continue;
+            if (!attacker.PawnIsAlive) return HookResult.Continue;
+
+            var codPlayer = _rankService.GetPlayer(attacker.SteamID);
+            if (codPlayer == null) return HookResult.Continue;
+
+            // Wampir — +15 HP za każde zabójstwo
+            if (ClassAbilities.HasHealOnKill(codPlayer.SelectedClassName))
+                ClassAbilities.ApplyHealOnKill(attacker);
+
+            return HookResult.Continue;
+        }, HookMode.Post);
         RegisterEventHandler<EventRoundStart>(_roundEvents.OnRoundStart);
         RegisterEventHandler<EventRoundEnd>(_roundEvents.OnRoundEnd);
         RegisterEventHandler<EventRoundMvp>(_roundEvents.OnRoundMvp);
