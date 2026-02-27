@@ -330,8 +330,6 @@ public class CodMod : BasePlugin
         RegisterEventHandler<EventBombPlanted>(_roundEvents.OnBombPlanted);
         RegisterEventHandler<EventBombDefused>(_roundEvents.OnBombDefused);
         RegisterEventHandler<EventBombExploded>(_roundEvents.OnBombExploded);
-        RegisterEventHandler<EventBombPickup>(_roundEvents.OnBombPickup);
-        RegisterEventHandler<EventBombDropped>(_roundEvents.OnBombDropped);
 
         RegisterEventHandler<EventBuymenuOpen>((@event, info) =>
         {
@@ -581,7 +579,7 @@ public class CodMod : BasePlugin
     private void SetClass(CCSPlayerController player, string className)
     {
         var codPlayer = _rankService.GetOrCreatePlayer(player.SteamID, player.PlayerName);
-        bool wasNew = codPlayer.SelectedClassName == null;
+        bool isFirstSelectionAfterJoin = codPlayer.SelectedClassName == null || codPlayer.SelectedClassName == CodClasses.None;
 
         codPlayer.PendingClassName = className;
 
@@ -592,10 +590,12 @@ public class CodMod : BasePlugin
         player.PrintToChat(
             $"{ChatColors.Green}[COD MOD]{ChatColors.Default} " +
             $"Wybrano: {ChatColors.Blue}{className}{ChatColors.Default} " +
-            $"(Lvl {ChatColors.Green}{progress.Level}{ChatColors.Default})");
+            $"(Lvl {ChatColors.Green}{progress.Level}{ChatColors.Default})" +
+            $"{(isFirstSelectionAfterJoin ? "" : $" - aktywuje się przy następnym respawnie.")}");
 
-        // if this is the very first selection and the pawn is alive, apply immediately
-        if (wasNew && player.PawnIsAlive)
+        // If this is the first class choice after joining and the pawn is alive, apply immediately.
+        // GiveClassEquipment clears current slots first, so previous/default loadout is removed.
+        if (isFirstSelectionAfterJoin && player.PawnIsAlive)
         {
             codPlayer.SelectedClassName = className;
             codPlayer.PendingClassName = null;
@@ -616,29 +616,72 @@ public class CodMod : BasePlugin
 
         var classDefinition = CodClasses.Get(className);
 
-        player.RemoveWeapons();
-        pawn.Render = Color.FromArgb(classDefinition.MovingAlpha, 255, 255, 255);
+        // Check if player has the bomb before removing weapons
+        var bombWeapon = pawn.WeaponServices?.MyWeapons
+            .Select(w => w.Value)
+            .FirstOrDefault(w => w?.IsValid is true && w.DesignerName == "weapon_c4");
+        
+        bool hasBomb = bombWeapon != null;
 
-        if (classDefinition.UsesTeamDefaultPistol)
+        // Drop the bomb BEFORE removing all weapons
+        if (hasBomb && player.Team == CsTeam.Terrorist && bombWeapon != null)
         {
-            if (player.Team == CsTeam.CounterTerrorist)
-                player.GiveNamedItem("weapon_usp_silencer");
-            else if (player.Team == CsTeam.Terrorist)
-                player.GiveNamedItem("weapon_glock");
-        }
+            // Drop the bomb on the ground
+            var itemServices = pawn.ItemServices?.As<CCSPlayer_ItemServices>();
+            if (itemServices != null)
+            {
+                itemServices.DropActivePlayerWeapon(bombWeapon);
+            }
+            
+            // Give a tiny delay for the drop to register
+            Server.NextFrame(() =>
+            {
+                if (!player.IsValid || !player.PawnIsAlive) return;
+                
+                // NOW remove all remaining weapons
+                player.RemoveWeapons();
+                
+                var pawnCheck = player.PlayerPawn.Value;
+                if (pawnCheck == null) return;
 
-        foreach (var weapon in classDefinition.Weapons)
+                pawnCheck.Render = Color.FromArgb(classDefinition.MovingAlpha, 255, 255, 255);
+
+                // Give class weapons
+                foreach (var weapon in classDefinition.Weapons)
+                {
+                    player.GiveNamedItem(weapon);
+                }
+
+                var codPlayer = _rankService.GetPlayer(player.SteamID);
+                if (Perks.HasHeGrenadeInstantKill(codPlayer?.ActivePerkName))
+                {
+                    player.GiveNamedItem("weapon_hegrenade");
+                }
+
+                player.GiveNamedItem("weapon_knife");
+            });
+        }
+        else
         {
-            player.GiveNamedItem(weapon);
-        }
+            // No bomb, just remove weapons and give equipment normally
+            player.RemoveWeapons();
 
-        var codPlayer = _rankService.GetPlayer(player.SteamID);
-        if (Perks.HasHeGrenadeInstantKill(codPlayer?.ActivePerkName))
-        {
-            player.GiveNamedItem("weapon_hegrenade");
-        }
+            pawn.Render = Color.FromArgb(classDefinition.MovingAlpha, 255, 255, 255);
 
-        player.GiveNamedItem("weapon_knife");
+            // Give class weapons
+            foreach (var weapon in classDefinition.Weapons)
+            {
+                player.GiveNamedItem(weapon);
+            }
+
+            var codPlayer = _rankService.GetPlayer(player.SteamID);
+            if (Perks.HasHeGrenadeInstantKill(codPlayer?.ActivePerkName))
+            {
+                player.GiveNamedItem("weapon_hegrenade");
+            }
+
+            player.GiveNamedItem("weapon_knife");
+        }
     }
 
     private void ApplyClassStats(CCSPlayerController player, string className)
