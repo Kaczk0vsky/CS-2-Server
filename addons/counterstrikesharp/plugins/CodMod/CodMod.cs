@@ -54,20 +54,14 @@ public class CodMod : BasePlugin
     {
         Console.WriteLine($"[CodMod] Loading plugin {ModuleVersion}...");
 
-         // Prevent weapon dropping
-        Server.ExecuteCommand("mp_drop_knife_enable 0");
-        Server.ExecuteCommand("mp_death_drop_gun 0");
-        Server.ExecuteCommand("mp_death_drop_grenade 0");
-        Server.ExecuteCommand("mp_death_drop_taser 0");
-        Server.ExecuteCommand("mp_death_drop_healthshot 0");
-        
-        // Prevent buy menu / in-game shop
-        Server.ExecuteCommand("mp_buy_anywhere 0");
-        Server.ExecuteCommand("mp_buy_during_immunity 0");
-        Server.ExecuteCommand("sv_buy_status_override 1");
+        ApplyServerSettings();
 
-        // Add armor + kevlar as default
-        Server.ExecuteCommand("mp_max_armor 2");
+        // Re-apply on every map start so gamemode configs don't override our settings
+        RegisterListener<Listeners.OnMapStart>(mapName =>
+        {
+            // Delay to run after gamemode config files finish executing
+            AddTimer(1.0f, ApplyServerSettings);
+        });
 
         // Initialize services
         _rankService = new RankService(_players);
@@ -339,10 +333,11 @@ public class CodMod : BasePlugin
                     $"Grasz jako: {ChatColors.Blue}{codPlayer.SelectedClassName}");
             }
 
-            // If no class selected yet, assign default "None" class
+            // If no class selected yet and no pending selection, skip equipment
+            // (player is still choosing from the class menu)
             if (codPlayer.SelectedClassName == null)
             {
-                codPlayer.SelectedClassName = "None";
+                return HookResult.Continue;
             }
 
             _jumpCount[player.SteamID] = 0;
@@ -381,7 +376,6 @@ public class CodMod : BasePlugin
             {
                 bool victimHadC4 = HasC4(victim);
                 victim.RemoveWeapons();
-                // Re-give C4 so the engine drops it naturally on death for other Ts to pick up
                 if (victimHadC4)
                 {
                     victim.GiveNamedItem("weapon_c4");
@@ -647,6 +641,24 @@ public class CodMod : BasePlugin
                 player.SetSpeed(1.1f);
                 break;
         }
+    }
+
+    private void ApplyServerSettings()
+    {
+        // Prevent weapon dropping
+        Server.ExecuteCommand("mp_drop_knife_enable 0");
+        Server.ExecuteCommand("mp_death_drop_gun 0");
+        Server.ExecuteCommand("mp_death_drop_grenade 0");
+        Server.ExecuteCommand("mp_death_drop_taser 0");
+        Server.ExecuteCommand("mp_death_drop_healthshot 0");
+
+        // Prevent buy menu / in-game shop
+        Server.ExecuteCommand("mp_buy_anywhere 0");
+        Server.ExecuteCommand("mp_buy_during_immunity 0");
+        Server.ExecuteCommand("sv_buy_status_override 1");
+
+        // Add armor + kevlar as default
+        Server.ExecuteCommand("mp_max_armor 2");
     }
 
     private void CheckNinjaInvisibility()
