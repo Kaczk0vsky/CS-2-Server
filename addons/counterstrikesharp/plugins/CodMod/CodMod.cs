@@ -483,6 +483,12 @@ public class CodMod : BasePlugin
                 @event.Weapon,
                 _rightClicking);
 
+            if (currentHp - damage <= 0)
+            {
+                victim.RemoveWeapons();
+                victim.RemoveItemBySlot(0);
+            }
+
             return HookResult.Continue;
         });
 
