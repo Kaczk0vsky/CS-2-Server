@@ -9,7 +9,7 @@ namespace WelcomePlugin;
 public class WelcomePlugin : BasePlugin
 {
     private CounterStrikeSharp.API.Modules.Timers.Timer? _timer;
-    private readonly string _modersName = "[JD Enterprise]";
+    private readonly string _modeName = "[COD MOD]";
 
     public override string ModuleName => "Base Plugin";
     public override string ModuleVersion => "1.0.0";
@@ -20,7 +20,7 @@ public class WelcomePlugin : BasePlugin
     {
         Console.WriteLine("Welcome Plugin loaded successfully!");
         // TODO: Change timer to longer value
-        _timer = AddTimer(5.0f, BroadcastMessage, TimerFlags.REPEAT);
+        _timer = AddTimer(30.0f, BroadcastMessage, TimerFlags.REPEAT);
 
         // Event: player connect
         RegisterEventHandler<EventPlayerConnect>((@event, info) =>
@@ -39,16 +39,16 @@ public class WelcomePlugin : BasePlugin
 
     private void BroadcastMessage()
     {
-        switch (Random.Shared.Next(0, 3))
+        switch (Random.Shared.Next(0, 8))
         {
             case 0:
                 Server.PrintToChatAll(
-                    $" {ChatColors.Green}{_modersName}{ChatColors.Default} By playing here you accept {ChatColors.Blue}/rules");
+                    $" {ChatColors.Green}{_modeName}{ChatColors.Default} By playing here you accept {ChatColors.Blue}/rules");
                 break;
 
             case 1:
                 Server.PrintToChatAll(
-                    $" {ChatColors.Green}{_modersName}{ChatColors.Default} Visit our website: {ChatColors.Blue}https://www.myawesomeserver.com");
+                    $" {ChatColors.Green}{_modeName}{ChatColors.Default} Visit our website: {ChatColors.Blue}https://www.localhost.com");
                 break;
 
             case 2:
@@ -56,7 +56,27 @@ public class WelcomePlugin : BasePlugin
                 var port = ConVar.Find("hostport")?.GetPrimitiveValue<int>() ?? 0;
 
                 Server.PrintToChatAll(
-                    $" {ChatColors.Green}{_modersName}{ChatColors.Default} Add: {ChatColors.Blue}{ip}:{port}{ChatColors.Default} to favourites!");
+                    $" {ChatColors.Green}{_modeName}{ChatColors.Default} Add: {ChatColors.Blue}{ip}:{port}{ChatColors.Default} to favourites!");
+                break;
+
+            case 3:
+                Server.PrintToChatAll($" {ChatColors.Green}{_modeName}{ChatColors.Default} Wpisz {ChatColors.Yellow}!klasa{ChatColors.Default} aby wybrać klasę!");
+                break;
+
+            case 4:
+                Server.PrintToChatAll($" {ChatColors.Green}{_modeName}{ChatColors.Default} Wpisz {ChatColors.Yellow}!ranks{ChatColors.Default} aby zobaczyć rangi!");
+                break;
+
+            case 5:
+                Server.PrintToChatAll($" {ChatColors.Green}{_modeName}{ChatColors.Default} Wpisz {ChatColors.Yellow}!myrank{ChatColors.Default} aby zobaczyć swoją rangę!");
+                break;
+
+            case 6:
+                Server.PrintToChatAll($" {ChatColors.Green}{_modeName}{ChatColors.Default} Wpisz {ChatColors.Yellow}!top{ChatColors.Default} aby zobaczyć top graczy!");
+                break;
+
+            case 7:
+                Server.PrintToChatAll($" {ChatColors.Green}{_modeName}{ChatColors.Default} Wpisz {ChatColors.Yellow}!codstats{ChatColors.Default} aby zobaczyć statystyki COD!");
                 break;
         }
     }
