@@ -379,8 +379,13 @@ public class CodMod : BasePlugin
 
             if (currentHp - damage <= 0)
             {
-                victim.RemoveWeapons();         // remove weapons moment before death
-                victim.RemoveItemBySlot(0);     // remove granades
+                bool victimHadC4 = HasC4(victim);
+                victim.RemoveWeapons();
+                // Re-give C4 so the engine drops it naturally on death for other Ts to pick up
+                if (victimHadC4)
+                {
+                    victim.GiveNamedItem("weapon_c4");
+                }
             }
 
             if (codPlayer.SelectedClassName != "Ninja" && codPlayer.SelectedClassName != "Komandos")
@@ -544,12 +549,29 @@ public class CodMod : BasePlugin
         }
     }
 
+    /// <summary>
+    /// Checks whether the player currently has C4 in their inventory.
+    /// </summary>
+    private static bool HasC4(CCSPlayerController player)
+    {
+        var pawn = player.PlayerPawn.Value;
+        if (pawn?.WeaponServices == null) return false;
+
+        foreach (var weapon in pawn.WeaponServices.MyWeapons)
+        {
+            if (weapon.Value?.DesignerName == "weapon_c4")
+                return true;
+        }
+        return false;
+    }
+
     private void GiveClassEquipment(CCSPlayerController player, string className)
     {
         if (!player.IsValid || !player.PawnIsAlive) return;
         var pawn = player.PlayerPawn.Value;
         if (pawn == null) return;
 
+        bool hadC4 = HasC4(player);
         player.RemoveWeapons();
         pawn.Render = Color.FromArgb(255, 255, 255, 255);
 
@@ -583,6 +605,11 @@ public class CodMod : BasePlugin
         }
 
         player.GiveNamedItem("weapon_knife");
+
+        if (hadC4)
+        {
+            player.GiveNamedItem("weapon_c4");
+        }
     }
 
     private void ApplyClassStats(CCSPlayerController player, string className)
