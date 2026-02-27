@@ -46,20 +46,14 @@ public class CodMod : BasePlugin
     {
         Console.WriteLine($"[CodMod] Loading plugin {ModuleVersion}...");
 
-         // Prevent weapon dropping
-        Server.ExecuteCommand("mp_drop_knife_enable 0");
-        Server.ExecuteCommand("mp_death_drop_gun 0");
-        Server.ExecuteCommand("mp_death_drop_grenade 0");
-        Server.ExecuteCommand("mp_death_drop_taser 0");
-        Server.ExecuteCommand("mp_death_drop_healthshot 0");
-        
-        // Prevent buy menu / in-game shop
-        Server.ExecuteCommand("mp_buy_anywhere 0");
-        Server.ExecuteCommand("mp_buy_during_immunity 0");
-        Server.ExecuteCommand("sv_buy_status_override 1");
+        ApplyServerSettings();
 
-        // Add armor + kevlar as default
-        Server.ExecuteCommand("mp_max_armor 2");
+        // Re-apply on every map start so gamemode configs don't override our settings
+        RegisterListener<Listeners.OnMapStart>(mapName =>
+        {
+            // Delay to run after gamemode config files finish executing
+            AddTimer(1.0f, ApplyServerSettings);
+        });
 
         // Initialize services
         _rankService = new RankService(_players);
@@ -417,7 +411,8 @@ public class CodMod : BasePlugin
                     $"Grasz jako: {ChatColors.Blue}{codPlayer.SelectedClassName}");
             }
 
-            // If no class selected yet, assign default "None" class
+            // If no class selected yet and no pending selection, skip equipment
+            // (player is still choosing from the class menu)
             if (codPlayer.SelectedClassName == null)
             {
                 codPlayer.SelectedClassName = CodClasses.None;
@@ -469,11 +464,6 @@ public class CodMod : BasePlugin
                 }
             }
 
-            if (currentHp - damage <= 0)
-            {
-                victim.RemoveWeapons();         // remove weapons moment before death
-                victim.RemoveItemBySlot(0);     // remove granades
-            }
 
             bool hasHeInstakillPerk = Perks.HasHeGrenadeInstantKill(codPlayer.ActivePerkName);
             bool isHeDamage = !string.IsNullOrEmpty(@event.Weapon) &&
@@ -492,6 +482,12 @@ public class CodMod : BasePlugin
                 codPlayer.SelectedClassName,
                 @event.Weapon,
                 _rightClicking);
+
+            if (currentHp - damage <= 0)
+            {
+                victim.RemoveWeapons();
+                victim.RemoveItemBySlot(0);
+            }
 
             return HookResult.Continue;
         });
@@ -609,6 +605,8 @@ public class CodMod : BasePlugin
 
         _overviewWindow.ShowOverview(player);
     }
+
+    /// <summary>
 
     private void GiveClassEquipment(CCSPlayerController player, string className)
     {
@@ -757,6 +755,24 @@ public class CodMod : BasePlugin
             });
 
         return true;
+    }
+
+    private void ApplyServerSettings()
+    {
+        // Prevent weapon dropping
+        Server.ExecuteCommand("mp_drop_knife_enable 0");
+        Server.ExecuteCommand("mp_death_drop_gun 0");
+        Server.ExecuteCommand("mp_death_drop_grenade 0");
+        Server.ExecuteCommand("mp_death_drop_taser 0");
+        Server.ExecuteCommand("mp_death_drop_healthshot 0");
+
+        // Prevent buy menu / in-game shop
+        Server.ExecuteCommand("mp_buy_anywhere 0");
+        Server.ExecuteCommand("mp_buy_during_immunity 0");
+        Server.ExecuteCommand("sv_buy_status_override 1");
+
+        // Add armor + kevlar as default
+        Server.ExecuteCommand("mp_max_armor 2");
     }
 
     private void CheckNinjaInvisibility()
