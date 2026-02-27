@@ -1,5 +1,6 @@
 ﻿using System.Drawing;
 using CodMod.Events;
+using CodMod.Menus;
 using CodMod.Models;
 using CodMod.Services;
 using CodMod.Extensions;
@@ -31,6 +32,7 @@ public class CodMod : BasePlugin
     // ─── Event Handlers ────────────────────────────────────────────
     private KillEvents _killEvents = null!;
     private RoundEvents _roundEvents = null!;
+    private StatsMenu _overviewWindow = null!;
 
     // ─── Class System (existing V1 logic) ──────────────────────────
     private readonly Dictionary<ulong, int> _jumpCount = new();
@@ -74,6 +76,7 @@ public class CodMod : BasePlugin
         _hudService = new HudService(_rankService);
         _killEvents = new KillEvents(_rankService, _hudService);
         _roundEvents = new RoundEvents(_rankService, _hudService);
+        _overviewWindow = new StatsMenu(this, _rankService);
 
         RegisterClassCommands();
         RegisterRankCommands();
@@ -100,12 +103,6 @@ public class CodMod : BasePlugin
 
     private void RegisterRankCommands()
     {
-        AddCommand("css_rank", "Pokaż swój rank", (player, info) =>
-        {
-            if (player == null || !player.IsValid) return;
-            ShowRankInfo(player);
-        });
-
         AddCommand("css_myrank", "Pokaż swój rank", (player, info) =>
         {
             if (player == null || !player.IsValid) return;
@@ -280,7 +277,6 @@ public class CodMod : BasePlugin
                 var rank = _rankService.GetGlobalRank(codPlayer.GlobalPoints);
 
                 player.PrintToChat($" {ChatColors.Green}[COD MOD]{ChatColors.Default} Witaj {ChatColors.Yellow}{player.PlayerName}{ChatColors.Default}!");
-                player.PrintToChat($" {ChatColors.Green}[COD MOD]{ChatColors.Default} Ranga: {RankService.GetRankColorCode(rank)}{rank.Name}{ChatColors.Default} | Punkty: {ChatColors.Blue}{codPlayer.GlobalPoints}");
 
                 if (codPlayer.SelectedClassName == null)
                     player.PrintToChat($" {ChatColors.Green}[COD MOD]{ChatColors.Default} Wpisz {ChatColors.Yellow}/klasa{ChatColors.Default} aby wybrać klasę!");
@@ -297,6 +293,7 @@ public class CodMod : BasePlugin
             var player = @event.Userid;
             if (player != null && player.IsValid)
             {
+                _overviewWindow.CloseWindow(player);
                 _initialMenuShown.Remove(player.SteamID);
                 _rightClicking.Remove(player.SteamID);
             }
@@ -354,6 +351,8 @@ public class CodMod : BasePlugin
                 GiveClassEquipment(player, codPlayer.SelectedClassName);
                 ApplyClassStats(player, codPlayer.SelectedClassName);
             });
+
+            _overviewWindow.ShowOverview(player);
 
             return HookResult.Continue;
         });
@@ -500,6 +499,8 @@ public class CodMod : BasePlugin
 
     private void OpenClassMenu(CCSPlayerController player)
     {
+        _overviewWindow.HideOverview(player);
+
         var menu = new CodMenu("Wybierz klasę");
         foreach (var className in ClassNames)
         {
@@ -510,7 +511,7 @@ public class CodMod : BasePlugin
         menu.Open(player);
         _activeMenus[player.SteamID] = menu;
 
-        AddTimer(0.02f, () =>
+        AddTimer(0.01f, () =>
         {
             if (!player.IsValid) return;
             if (_activeMenus.TryGetValue(player.SteamID, out var m) && m.IsOpen)
@@ -542,6 +543,8 @@ public class CodMod : BasePlugin
             GiveClassEquipment(player, className);
             ApplyClassStats(player, className);
         }
+
+        _overviewWindow.ShowOverview(player);
     }
 
     private void GiveClassEquipment(CCSPlayerController player, string className)
