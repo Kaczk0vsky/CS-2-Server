@@ -250,41 +250,4 @@ public class RoundEvents
         }
         return HookResult.Continue;
     }
-
-    public HookResult OnBombPickup(EventBombPickup @event, GameEventInfo info)
-    {
-        if (!_rankService.IsPointsAllowed()) return HookResult.Continue;
-        var player = @event.Userid;
-        if (player != null && player.IsValid && !player.IsBot)
-        {
-            var result = _rankService.AddPoints(player, RankService.POINTS_BOMB_PICKUP, "bomb pickup");
-            player.PrintToChat(
-                $" {ChatColors.Green}[COD MOD]{ChatColors.Default} " +
-                $"{ChatColors.Green}+{RankService.POINTS_BOMB_PICKUP}{ChatColors.Default} (bomb pickup)");
-            _hudService.ShowRankChange(player, result.oldRank, result.newRank);
-            if (result.classLeveledUp)
-            {
-                var codPlayer = _rankService.GetPlayer(player.SteamID);
-                if (codPlayer?.SelectedClassName != null)
-                    _hudService.ShowClassLevelUp(player, codPlayer.SelectedClassName, result.classNewLevel);
-                _showLevelUpMenu?.Invoke(player);
-            }
-        }
-        return HookResult.Continue;
-    }
-
-    public HookResult OnBombDropped(EventBombDropped @event, GameEventInfo info)
-    {
-        if (!_rankService.IsPointsAllowed()) return HookResult.Continue;
-        var player = @event.Userid;
-        if (player != null && player.IsValid && !player.IsBot)
-        {
-            var result = _rankService.AddPoints(player, RankService.POINTS_BOMB_DROP, "bomb drop");
-            player.PrintToChat(
-                $" {ChatColors.Red}[COD MOD]{ChatColors.Default} " +
-                $"{ChatColors.Red}{RankService.POINTS_BOMB_DROP}{ChatColors.Default} (bomb drop)");
-            _hudService.ShowRankChange(player, result.oldRank, result.newRank);
-        }
-        return HookResult.Continue;
-    }
 }
