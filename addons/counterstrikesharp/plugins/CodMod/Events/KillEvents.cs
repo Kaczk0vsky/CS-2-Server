@@ -122,7 +122,6 @@ public class KillEvents
                             float perkSpeedBonus = Perks.GetSpeedBonus(attackerPlayer.ActivePerkName);
                             float finalSpeed = Math.Clamp(classDefinition.BaseSpeed + statSpeedBonus + perkSpeedBonus, 0.1f, 2.5f);
 
-                            attacker.SetHp(finalHp);
                             var attackerPawn = attacker.PlayerPawn.Value;
                             if (attackerPawn != null)
                                 attackerPawn.MaxHealth = finalHp;

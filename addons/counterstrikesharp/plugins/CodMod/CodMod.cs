@@ -259,8 +259,9 @@ public class CodMod : BasePlugin
 
         if (player.PawnIsAlive && codPlayer.SelectedClassName != null)
         {
-            GiveClassEquipment(player, codPlayer.SelectedClassName);
-            ApplyClassStats(player, codPlayer.SelectedClassName);
+            bool afterDrop = true;
+            // GiveClassEquipment(player, codPlayer.SelectedClassName); // Do we really need to refresh equipment?
+            ApplyClassStats(player, codPlayer.SelectedClassName, afterDrop);
         }
 
         player.PrintToChat(
@@ -487,6 +488,19 @@ public class CodMod : BasePlugin
                 victim.RemoveItemBySlot(0);
             }
 
+            if (victim.PawnIsAlive)
+            {
+                Server.NextFrame(() =>
+                {
+                    if (!victim.IsValid || !victim.PawnIsAlive) return;
+
+                    var victimData = _rankService.GetPlayer(victim.SteamID);
+                    if (victimData?.SelectedClassName == null) return;
+
+                    ApplyClassMovementStats(victim, victimData.SelectedClassName);
+                });
+            }
+
             return HookResult.Continue;
         });
 
@@ -534,6 +548,20 @@ public class CodMod : BasePlugin
     {
         // keep ninja invisibility updated
         AddTimer(0.2f, CheckNinjaInvisibility, TimerFlags.REPEAT);
+
+        // keep class movement modifiers consistent (CS2 can override speed after damage)
+        AddTimer(0.2f, () =>
+        {
+            foreach (var player in Utilities.GetPlayers())
+            {
+                if (player == null || !player.IsValid || !player.PawnIsAlive) continue;
+
+                var codPlayer = _rankService.GetPlayer(player.SteamID);
+                if (codPlayer?.SelectedClassName == null) continue;
+
+                ApplyClassMovementStats(player, codPlayer.SelectedClassName);
+            }
+        }, TimerFlags.REPEAT);
 
         // reset jump counters when players land on ground (safety net)
         AddTimer(0.2f, () =>
@@ -684,7 +712,7 @@ public class CodMod : BasePlugin
         }
     }
 
-    private void ApplyClassStats(CCSPlayerController player, string className)
+    private void ApplyClassStats(CCSPlayerController player, string className, bool afterDrop = false)
     {
         var pawn = player.PlayerPawn.Value;
         if (pawn == null) return;
@@ -705,8 +733,31 @@ public class CodMod : BasePlugin
         int finalHp = baseHp + bonusHp + perkHealthBonus;
         float finalSpeed = Math.Clamp(baseSpeed + bonusSpeed + perkSpeedBonus, 0.1f, 2.5f);
 
-        player.SetHp(finalHp);
-        pawn.MaxHealth = finalHp;
+        if (!afterDrop)
+        {
+            player.SetHp(finalHp);
+        };
+
+        player.SetSpeed(finalSpeed);
+        player.SetGravity(baseGravity);
+    }
+
+    private void ApplyClassMovementStats(CCSPlayerController player, string className)
+    {
+        var pawn = player.PlayerPawn.Value;
+        if (pawn == null) return;
+
+        var classDefinition = CodClasses.Get(className);
+        float baseSpeed = classDefinition.BaseSpeed;
+        float baseGravity = classDefinition.BaseGravity;
+
+        var codPlayer = _rankService.GetPlayer(player.SteamID);
+        var progress = codPlayer?.GetActiveClassProgress();
+        float perkSpeedBonus = Perks.GetSpeedBonus(codPlayer?.ActivePerkName);
+
+        float bonusSpeed = (progress?.SpeedPoints ?? 0) * 0.005f;
+        float finalSpeed = Math.Clamp(baseSpeed + bonusSpeed + perkSpeedBonus, 0.1f, 2.5f);
+
         player.SetSpeed(finalSpeed);
         player.SetGravity(baseGravity);
     }
