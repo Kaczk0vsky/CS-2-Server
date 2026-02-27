@@ -9,11 +9,22 @@ public class RoundEvents
 {
     private readonly RankService _rankService;
     private readonly HudService _hudService;
+    private readonly Action<CCSPlayerController>? _showLevelUpMenu;
+    private Action<CCSPlayerController>? _onRoundStartPlayer;
 
-    public RoundEvents(RankService rankService, HudService hudService)
+    public RoundEvents(
+        RankService rankService,
+        HudService hudService,
+        Action<CCSPlayerController>? showLevelUpMenu = null)
     {
         _rankService = rankService;
         _hudService = hudService;
+        _showLevelUpMenu = showLevelUpMenu;
+    }
+
+    public void SetRoundStartPlayerHandler(Action<CCSPlayerController>? onRoundStartPlayer)
+    {
+        _onRoundStartPlayer = onRoundStartPlayer;
     }
 
     public HookResult OnRoundStart(EventRoundStart @event, GameEventInfo info)
@@ -38,6 +49,7 @@ public class RoundEvents
                 if (player == null || !player.IsValid || player.IsBot) continue;
                 if (player.TeamNum < 2) continue;
                 PrintStatsToChat(player);
+                _onRoundStartPlayer?.Invoke(player);
             }
         });
 
@@ -124,6 +136,7 @@ public class RoundEvents
                 var codPlayer = _rankService.GetPlayer(player.SteamID);
                 if (codPlayer?.SelectedClassName != null)
                     _hudService.ShowClassLevelUp(player, codPlayer.SelectedClassName, result.classNewLevel);
+                _showLevelUpMenu?.Invoke(player);
             }
         }
 
@@ -147,6 +160,7 @@ public class RoundEvents
                 var codPlayer = _rankService.GetPlayer(player.SteamID);
                 if (codPlayer?.SelectedClassName != null)
                     _hudService.ShowClassLevelUp(player, codPlayer.SelectedClassName, result.classNewLevel);
+                _showLevelUpMenu?.Invoke(player);
             }
         }
         return HookResult.Continue;
@@ -168,6 +182,7 @@ public class RoundEvents
                 var codPlayer = _rankService.GetPlayer(player.SteamID);
                 if (codPlayer?.SelectedClassName != null)
                     _hudService.ShowClassLevelUp(player, codPlayer.SelectedClassName, result.classNewLevel);
+                _showLevelUpMenu?.Invoke(player);
             }
         }
         return HookResult.Continue;
@@ -189,6 +204,7 @@ public class RoundEvents
                 var codPlayer = _rankService.GetPlayer(player.SteamID);
                 if (codPlayer?.SelectedClassName != null)
                     _hudService.ShowClassLevelUp(player, codPlayer.SelectedClassName, result.classNewLevel);
+                _showLevelUpMenu?.Invoke(player);
             }
 
             foreach (var ct in Utilities.GetPlayers().Where(p =>
@@ -206,6 +222,7 @@ public class RoundEvents
                     var codCt = _rankService.GetPlayer(ct.SteamID);
                     if (codCt?.SelectedClassName != null)
                         _hudService.ShowClassLevelUp(ct, codCt.SelectedClassName, ctResult.classNewLevel);
+                    _showLevelUpMenu?.Invoke(ct);
                 }
             }
         }
@@ -228,6 +245,7 @@ public class RoundEvents
                 var codPlayer = _rankService.GetPlayer(terrorist.SteamID);
                 if (codPlayer?.SelectedClassName != null)
                     _hudService.ShowClassLevelUp(terrorist, codPlayer.SelectedClassName, result.classNewLevel);
+                _showLevelUpMenu?.Invoke(terrorist);
             }
         }
         return HookResult.Continue;
@@ -249,6 +267,7 @@ public class RoundEvents
                 var codPlayer = _rankService.GetPlayer(player.SteamID);
                 if (codPlayer?.SelectedClassName != null)
                     _hudService.ShowClassLevelUp(player, codPlayer.SelectedClassName, result.classNewLevel);
+                _showLevelUpMenu?.Invoke(player);
             }
         }
         return HookResult.Continue;

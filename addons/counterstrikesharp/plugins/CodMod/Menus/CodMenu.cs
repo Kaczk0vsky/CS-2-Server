@@ -26,8 +26,15 @@ namespace CodMod
 
         public void Open(CCSPlayerController player)
         {
+            Open(player, 0);
+        }
+
+        public void Open(CCSPlayerController player, int selectedIndex)
+        {
             IsOpen = true;
-            _currentIndex = 0;
+            _currentIndex = Options.Count == 0
+                ? 0
+                : Math.Clamp(selectedIndex, 0, Options.Count - 1);
             PrintToPlayer(player);
         }
 
