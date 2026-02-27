@@ -8,11 +8,16 @@ public class KillEvents
 {
     private readonly RankService _rankService;
     private readonly HudService _hudService;
+    private readonly Action<CCSPlayerController>? _showLevelUpMenu;
 
-    public KillEvents(RankService rankService, HudService hudService)
+    public KillEvents(
+        RankService rankService,
+        HudService hudService,
+        Action<CCSPlayerController>? showLevelUpMenu = null)
     {
         _rankService = rankService;
         _hudService = hudService;
+        _showLevelUpMenu = showLevelUpMenu;
     }
 
     public HookResult OnPlayerDeath(EventPlayerDeath @event, GameEventInfo info)
@@ -85,6 +90,7 @@ public class KillEvents
                     var codPlayer = _rankService.GetPlayer(attacker.SteamID);
                     if (codPlayer?.SelectedClassName != null)
                         _hudService.ShowClassLevelUp(attacker, codPlayer.SelectedClassName, result.classNewLevel);
+                    _showLevelUpMenu?.Invoke(attacker);
                 }
 
                 // Kill streak
@@ -134,6 +140,7 @@ public class KillEvents
             var codPlayer = _rankService.GetPlayer(player.SteamID);
             if (codPlayer?.SelectedClassName != null)
                 _hudService.ShowClassLevelUp(player, codPlayer.SelectedClassName, result.classNewLevel);
+            _showLevelUpMenu?.Invoke(player);
         }
     }
 }

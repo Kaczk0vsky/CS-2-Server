@@ -33,11 +33,14 @@ public class CodMod : BasePlugin
     private KillEvents _killEvents = null!;
     private RoundEvents _roundEvents = null!;
     private StatsMenu _overviewWindow = null!;
+    private LevelUpMenu _levelUpMenu = null!;
 
     // ─── Class System (existing V1 logic) ──────────────────────────
     private readonly Dictionary<ulong, int> _jumpCount = new();
     private readonly HashSet<ulong> _rightClicking = new(); // players currently holding right‑click
     private readonly Dictionary<ulong, CodMenu> _activeMenus = new();
+    private readonly HashSet<ulong> _pendingLevelUpMenus = new();
+    private readonly HashSet<ulong> _pendingStatResets = new();
 
     // Available class names (kept simple — class models managed elsewhere)
     private static readonly string[] ClassNames = { "Snajper", "Komandos", "Strzelec wyborowy", "Ninja" };
@@ -74,8 +77,10 @@ public class CodMod : BasePlugin
         // Initialize services
         _rankService = new RankService(_players);
         _hudService = new HudService(_rankService);
-        _killEvents = new KillEvents(_rankService, _hudService);
-        _roundEvents = new RoundEvents(_rankService, _hudService);
+        _levelUpMenu = new LevelUpMenu(_rankService);
+        _killEvents = new KillEvents(_rankService, _hudService, QueueLevelUpMenu);
+        _roundEvents = new RoundEvents(_rankService, _hudService, QueueLevelUpMenu);
+        _roundEvents.SetRoundStartPlayerHandler(TryShowQueuedLevelUpMenuAtRoundStart);
         _overviewWindow = new StatsMenu(this, _rankService);
 
         RegisterClassCommands();
@@ -103,6 +108,28 @@ public class CodMod : BasePlugin
 
     private void RegisterRankCommands()
     {
+        AddCommand("reset", "Resetuj statystyki na początku następnej rundy", (player, info) =>
+        {
+            if (player == null || !player.IsValid) return;
+
+            var codPlayer = _rankService.GetPlayer(player.SteamID);
+            var progress = codPlayer?.GetActiveClassProgress();
+            if (codPlayer?.SelectedClassName == null || progress == null)
+            {
+                player.PrintToChat($" {ChatColors.Red}[COD MOD]{ChatColors.Default} Najpierw wybierz klasę.");
+                return;
+            }
+
+            if (progress.Level <= 1)
+            {
+                player.PrintToChat($" {ChatColors.Red}[COD MOD]{ChatColors.Default} Nie możesz resetować statystyk na 1 poziomie.");
+                return;
+            }
+
+            _pendingStatResets.Add(player.SteamID);
+            player.PrintToChat($" {ChatColors.Gold}[COD MOD]{ChatColors.Default} Statystyki zostaną zresetowane na początku następnej rundy.");
+        });
+
         AddCommand("css_myrank", "Pokaż swój rank", (player, info) =>
         {
             if (player == null || !player.IsValid) return;
@@ -218,7 +245,8 @@ public class CodMod : BasePlugin
             if (player == null || !player.IsValid) return;
             if (!_activeMenus.TryGetValue(player.SteamID, out var menu) || !menu.IsOpen) return;
             menu.SelectCurrent(player);
-            _activeMenus.Remove(player.SteamID);
+            if (_activeMenus.TryGetValue(player.SteamID, out var currentMenu) && ReferenceEquals(currentMenu, menu))
+                _activeMenus.Remove(player.SteamID);
         });
 
         AddCommand("menu_cancel", "Menu cancel/close", (player, info) =>
@@ -376,6 +404,18 @@ public class CodMod : BasePlugin
             int damage = @event.DmgHealth;
             int currentHp = victimPawn.Health;
 
+            var victimCodPlayer = _rankService.GetPlayer(victim.SteamID);
+            var victimProgress = victimCodPlayer?.GetActiveClassProgress();
+            if (victimProgress != null && victimProgress.EndurancePoints > 0 && currentHp > 0)
+            {
+                int preventedDamage = victimProgress.EndurancePoints / 10;
+                if (preventedDamage > 0)
+                {
+                    int restoredHp = Math.Min(victimPawn.MaxHealth, currentHp + preventedDamage);
+                    victim.SetHp(restoredHp);
+                }
+            }
+
             if (currentHp - damage <= 0)
             {
                 victim.RemoveWeapons();         // remove weapons moment before death
@@ -425,7 +465,8 @@ public class CodMod : BasePlugin
                 if ((pressed & PlayerButtons.Use) != 0)
                 {
                     menu.SelectCurrent(player);
-                    _activeMenus.Remove(player.SteamID);
+                    if (_activeMenus.TryGetValue(player.SteamID, out var currentMenu) && ReferenceEquals(currentMenu, menu))
+                        _activeMenus.Remove(player.SteamID);
                 }
                 if ((pressed & PlayerButtons.Scoreboard) != 0)
                 {
@@ -593,11 +634,9 @@ public class CodMod : BasePlugin
         var pawn = player.PlayerPawn.Value;
         if (pawn == null) return;
 
-        // Reset to defaults before applying class modifiers
-        player.SetHp(100);
-        pawn.MaxHealth = 100;
-        player.SetSpeed(1.0f);
-        player.SetGravity(1.0f);
+        int baseHp = 100;
+        float baseSpeed = 1.0f;
+        float baseGravity = 1.0f;
 
         switch (className)
         {
@@ -605,24 +644,126 @@ public class CodMod : BasePlugin
                 // None class
                 break;
             case "Snajper":
-                player.SetHp(110);
+                baseHp = 110;
                 break;
             case "Komandos":
-                player.SetHp(105);
-                player.SetSpeed(1.4f);
+                baseHp = 105;
+                baseSpeed = 1.4f;
                 break;
             case "Strzelec wyborowy":
-                player.SetHp(200);
-                player.SetSpeed(0.6f);
-                player.SetGravity(1.5f);
+                baseHp = 200;
+                baseSpeed = 0.6f;
+                baseGravity = 1.5f;
                 break;
             case "Ninja":
-                player.SetHp(50);
-                pawn.MaxHealth = 50;
-                player.SetGravity(0.25f);
-                player.SetSpeed(1.1f);
+                baseHp = 50;
+                baseSpeed = 1.1f;
+                baseGravity = 0.25f;
                 break;
         }
+
+        var codPlayer = _rankService.GetPlayer(player.SteamID);
+        var progress = codPlayer?.GetActiveClassProgress();
+
+        int bonusHp = (progress?.HealthPoints ?? 0) * 2;
+        float bonusSpeed = (progress?.SpeedPoints ?? 0) * 0.005f;
+
+        int finalHp = baseHp + bonusHp;
+        float finalSpeed = Math.Clamp(baseSpeed + bonusSpeed, 0.1f, 2.5f);
+
+        player.SetHp(finalHp);
+        pawn.MaxHealth = finalHp;
+        player.SetSpeed(finalSpeed);
+        player.SetGravity(baseGravity);
+    }
+
+    private void QueueLevelUpMenu(CCSPlayerController player)
+    {
+        if (!player.IsValid || player.IsBot) return;
+
+        var codPlayer = _rankService.GetPlayer(player.SteamID);
+        var progress = codPlayer?.GetActiveClassProgress();
+        if (progress == null || progress.AvailableStatPoints <= 0) return;
+
+        _pendingLevelUpMenus.Add(player.SteamID);
+    }
+
+    private void TryShowQueuedLevelUpMenuAtRoundStart(CCSPlayerController player)
+    {
+        if (!player.IsValid || player.IsBot) return;
+
+        if (_pendingStatResets.Contains(player.SteamID))
+        {
+            _pendingStatResets.Remove(player.SteamID);
+
+            var codPlayer = _rankService.GetPlayer(player.SteamID);
+            var progress = codPlayer?.GetActiveClassProgress();
+            if (progress != null)
+            {
+                if (progress.Level <= 1)
+                {
+                    player.PrintToChat($" {ChatColors.Red}[COD MOD]{ChatColors.Default} Reset statystyk wymaga minimum 2 poziomu.");
+                    return;
+                }
+
+                progress.HealthPoints = 0;
+                progress.SpeedPoints = 0;
+                progress.IntelligencePoints = 0;
+                progress.EndurancePoints = 0;
+                progress.AvailableStatPoints = Math.Max(0, progress.Level - 1) * 2;
+
+                if (codPlayer?.SelectedClassName != null && player.PawnIsAlive)
+                    ApplyClassStats(player, codPlayer.SelectedClassName);
+
+                OpenLevelUpMenu(player, true);
+                return;
+            }
+        }
+
+        if (!_pendingLevelUpMenus.Contains(player.SteamID)) return;
+
+        if (OpenLevelUpMenu(player, false))
+            _pendingLevelUpMenus.Remove(player.SteamID);
+    }
+
+    private bool OpenLevelUpMenu(CCSPlayerController player, bool allowWithoutPoints)
+    {
+        if (!player.IsValid || player.IsBot) return false;
+
+        var codPlayer = _rankService.GetPlayer(player.SteamID);
+        var progress = codPlayer?.GetActiveClassProgress();
+        if (progress == null)
+        {
+            player.PrintToChat($" {ChatColors.Red}[COD MOD]{ChatColors.Default} Najpierw wybierz klasę.");
+            return false;
+        }
+
+        if (!allowWithoutPoints && progress.AvailableStatPoints <= 0) return false;
+
+        if (_activeMenus.TryGetValue(player.SteamID, out var existing) && existing.IsOpen)
+        {
+            existing.Close(player);
+            _activeMenus.Remove(player.SteamID);
+        }
+
+        _overviewWindow.HideOverview(player);
+
+        _levelUpMenu.Open(
+            player,
+            (p, menu) => _activeMenus[p.SteamID] = menu,
+            p =>
+            {
+                var pData = _rankService.GetPlayer(p.SteamID);
+                if (pData?.SelectedClassName != null && p.PawnIsAlive)
+                    ApplyClassStats(p, pData.SelectedClassName);
+            },
+            p =>
+            {
+                _activeMenus.Remove(p.SteamID);
+                _overviewWindow.ShowOverview(p);
+            });
+
+        return true;
     }
 
     private void CheckNinjaInvisibility()

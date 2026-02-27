@@ -61,4 +61,43 @@ public class ClassProgress
 {
     public int Level { get; set; } = 1;
     public int Xp { get; set; } = 0;
+    public int AvailableStatPoints { get; set; } = 0;
+    public int HealthPoints { get; set; } = 0;
+    public int SpeedPoints { get; set; } = 0;
+    public int IntelligencePoints { get; set; } = 0;
+    public int EndurancePoints { get; set; } = 0;
+
+    public const int MaxStatPointsPerAttribute = 100;
+
+    public bool TryAddHealthPoint()
+    {
+        if (AvailableStatPoints <= 0 || HealthPoints >= MaxStatPointsPerAttribute) return false;
+        HealthPoints++;
+        AvailableStatPoints--;
+        return true;
+    }
+
+    public bool TryAddSpeedPoint()
+    {
+        if (AvailableStatPoints <= 0 || SpeedPoints >= MaxStatPointsPerAttribute) return false;
+        SpeedPoints++;
+        AvailableStatPoints--;
+        return true;
+    }
+
+    public bool TryAddIntelligencePoint()
+    {
+        if (AvailableStatPoints <= 0 || IntelligencePoints >= MaxStatPointsPerAttribute) return false;
+        IntelligencePoints++;
+        AvailableStatPoints--;
+        return true;
+    }
+
+    public bool TryAddEndurancePoint()
+    {
+        if (AvailableStatPoints <= 0 || EndurancePoints >= MaxStatPointsPerAttribute) return false;
+        EndurancePoints++;
+        AvailableStatPoints--;
+        return true;
+    }
 }

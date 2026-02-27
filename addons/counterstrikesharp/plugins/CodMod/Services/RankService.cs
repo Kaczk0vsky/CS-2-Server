@@ -164,6 +164,8 @@ public class RankService
                 {
                     classLeveledUp = true;
                     classNewLevel = progress.Level;
+                    int levelsGained = progress.Level - oldLevel;
+                    progress.AvailableStatPoints += levelsGained * 2;
                 }
             }
         }
